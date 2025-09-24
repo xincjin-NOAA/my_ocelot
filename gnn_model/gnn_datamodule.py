@@ -185,7 +185,7 @@ class GNNDataModule(pl.LightningDataModule):
             pipeline_cfg=self.hparams.pipeline,
         )
 
-        # Create val data_summary 
+        # Create val data_summary
         print(f"[VAL SETUP] start: {initial_val_start_str}; end: {initial_val_end_str}")
         self.val_data_summary = organize_bins_times(
             self.z,
