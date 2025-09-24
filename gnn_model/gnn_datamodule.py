@@ -28,6 +28,7 @@ class BinDataset(Dataset):
         create_graph_fn,
         observation_config,
         feature_stats=None,
+        mode="UNKNOWN",
     ):
         self.bin_names = bin_names
         self.data_summary = data_summary
@@ -35,6 +36,7 @@ class BinDataset(Dataset):
         self.create_graph_fn = create_graph_fn
         self.observation_config = observation_config
         self.feature_stats = feature_stats
+        self.mode = mode
 
     def __len__(self):
         return len(self.bin_names)
@@ -42,6 +44,29 @@ class BinDataset(Dataset):
     def __getitem__(self, idx):
         bin_name = self.bin_names[idx]
         rank = dist.get_rank() if dist.is_available() and dist.is_initialized() else 0
+
+        # [PRINT: Data Loading INFO]
+        print(f"[Rank {rank}] [{self.mode}] Accessing bin_name: {bin_name}")
+        print(f"[Rank {rank}] [{self.mode}] BinDataset.data_summary has {len(self.data_summary)} bins")
+        print(f"[Rank {rank}] [{self.mode}] Available bins in BinDataset: \
+                {list(self.data_summary.keys())[:5]}...{list(self.data_summary.keys())[-3:] if len(self.data_summary) > 5 else []}")
+
+        if bin_name in self.data_summary:
+            print(f"[Rank {rank}] FOUND {bin_name} in BinDataset.data_summary")
+
+            # Check if this is old data or new data
+            bin_data = self.data_summary[bin_name]
+            if 'satellite' in bin_data and 'atms' in bin_data['satellite']:
+                input_time = bin_data['satellite']['atms'].get('input_time')
+                print(f"[Rank {rank}] {bin_name} input_time: {input_time}")
+
+        else:
+            print(f"[Rank {rank}] ERROR {bin_name} NOT found in BinDataset.data_summary")
+            available = list(self.data_summary.keys())
+            print(f"[Rank {rank}] Available: {available}")
+            raise KeyError(f"Missing {bin_name}")
+        # [Loading INFO - END]
+
         print(f"[Rank {rank}] Fetching {bin_name}...")
         try:
             bin_data = extract_features(self.z, self.data_summary, bin_name, self.observation_config, feature_stats=self.feature_stats)[bin_name]
@@ -57,8 +82,12 @@ class GNNDataModule(pl.LightningDataModule):
     def __init__(
         self,
         data_path,
-        start_date,
-        end_date,
+        train_start_date,     # NEW
+        train_end_date,       # NEW
+        val_start_date,       # NEW
+        val_end_date,         # NEW
+        train_window_days,    # NEW
+        val_window_days,      # NEW
         observation_config,
         mesh_structure,
         batch_size=1,
@@ -68,6 +97,14 @@ class GNNDataModule(pl.LightningDataModule):
     ):
         super().__init__()
         self.save_hyperparameters()
+        self.train_start_date = pd.to_datetime(train_start_date)
+        self.train_end_date = pd.to_datetime(train_end_date)
+        self.val_start_date = pd.to_datetime(val_start_date)
+        self.val_end_date = pd.to_datetime(val_end_date)
+        self.train_window_days = pd.Timedelta(days=train_window_days)
+        self.val_window_days = pd.Timedelta(days=val_window_days)
+        self.train_data_summary = None
+        self.val_data_summary = None
         self.mesh_structure = mesh_structure
         self.feature_stats = feature_stats
         self.z = None
@@ -131,18 +168,43 @@ class GNNDataModule(pl.LightningDataModule):
         if dist.is_available() and dist.is_initialized():
             dist.barrier()
 
-        self.data_summary = organize_bins_times(
+        # Calculate dates as pandas objects, then convert to strings for organize_bins_times
+        initial_train_start_str = (self.train_start_date).strftime("%Y-%m-%d")
+        initial_train_end_str = (self.train_start_date + self.train_window_days).strftime("%Y-%m-%d")
+
+        initial_val_start_str = (self.val_start_date).strftime("%Y-%m-%d")
+        initial_val_end_str = (self.val_start_date + self.val_window_days).strftime("%Y-%m-%d")
+
+        # Create train data_summary
+        print(f"[TRAIN SETUP] start: {initial_train_start_str}; end: {initial_train_end_str}")
+        self.train_data_summary = organize_bins_times(
             self.z,
-            self.hparams.start_date,
-            self.hparams.end_date,
+            initial_train_start_str,
+            initial_train_end_str,
             self.hparams.observation_config,
             pipeline_cfg=self.hparams.pipeline,
         )
-        self.all_bin_names = sorted(list(self.data_summary.keys()), key=lambda x: int(x.replace("bin", "")))
+
+        # Create val data_summary  
+        print(f"[VAL SETUP] start: {initial_val_start_str}; end: {initial_val_end_str}")
+        self.val_data_summary = organize_bins_times(
+            self.z,
+            initial_val_start_str,
+            initial_val_end_str,
+            self.hparams.observation_config,
+            pipeline_cfg=self.hparams.pipeline,
+        )
+
+        # Set bin names from respective data summaries
+        self.train_bin_names = sorted(list(self.train_data_summary.keys()),
+                                     key=lambda x: int(x.replace("bin", "")))
+        self.val_bin_names = sorted(list(self.val_data_summary.keys()),
+                                   key=lambda x: int(x.replace("bin", "")))
+
+        print(f"[SETUP] train bin names: {self.train_bin_names}")
+        print(f"[SETUP] val bin names: {self.val_bin_names}")
 
         if stage == "fit" or stage is None:
-            self.train_bin_names = self.all_bin_names
-            self.val_bin_names = self.all_bin_names
             pass
 
     def _create_graph_structure(self, bin_data):
@@ -247,14 +309,47 @@ class GNNDataModule(pl.LightningDataModule):
 
         return data
 
+    def set_train_data(self, start_date, end_date):
+        """Update train data with new date range"""
+        start_str = start_date.strftime("%Y-%m-%d") if hasattr(start_date, 'strftime') else start_date
+        end_str = end_date.strftime("%Y-%m-%d") if hasattr(end_date, 'strftime') else end_date
+        print(f"[UPDATE TRAIN DATA] {start_date} to {end_date}")
+        self.train_data_summary = organize_bins_times(
+            self.z,
+            start_date,
+            end_date,
+            self.hparams.observation_config,
+            pipeline_cfg=self.hparams.pipeline,
+        )
+        self.train_bin_names = sorted(list(self.train_data_summary.keys()),
+                                     key=lambda x: int(x.replace("bin", "")))
+        print(f"[UPDATE TRAIN] New train bins: {self.train_bin_names}")
+
+    def set_val_data(self, start_date, end_date):
+        """Update validation data with new date range"""
+        start_str = start_date.strftime("%Y-%m-%d") if hasattr(start_date, 'strftime') else start_date
+        end_str = end_date.strftime("%Y-%m-%d") if hasattr(end_date, 'strftime') else end_date
+        print(f"[UPDATE VAL DATA] {start_date} to {end_date}")
+        self.val_data_summary = organize_bins_times(
+            self.z,
+            start_date,
+            end_date,
+            self.hparams.observation_config,
+            pipeline_cfg=self.hparams.pipeline,
+        )
+        self.val_bin_names = sorted(list(self.val_data_summary.keys()),
+                                   key=lambda x: int(x.replace("bin", "")))
+        print(f"[UPDATE VAL] New val bins: {self.val_bin_names}")
+
     def train_dataloader(self):
         train_dataset = BinDataset(
-            self.train_bin_names,  # self.all_bin_names,
-            self.data_summary,
+            self.train_bin_names,
+            self.train_data_summary,
             self.z,
             self._create_graph_structure,
             self.hparams.observation_config,
             feature_stats=self.feature_stats,
+            mode="TRAIN",
         )
         return PyGDataLoader(
             train_dataset,
@@ -266,15 +361,16 @@ class GNNDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
-        if not self.val_bin_names:  # self.all_bin_names:
+        if not self.val_bin_names:
             return None
         val_dataset = BinDataset(
-            self.val_bin_names,  # self.all_bin_names,
-            self.data_summary,
+            self.val_bin_names,
+            self.val_data_summary,
             self.z,
             self._create_graph_structure,
             self.hparams.observation_config,
             feature_stats=self.feature_stats,
+            mode="VAL",
         )
         return PyGDataLoader(
             val_dataset,

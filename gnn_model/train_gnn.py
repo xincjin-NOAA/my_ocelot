@@ -77,12 +77,12 @@ def main():
     # --- DEFINE THE FULL DATE RANGE FOR THE EXPERIMENT ---
     FULL_START_DATE = "2024-04-01"
     FULL_END_DATE = "2024-07-01"  # e.g., 3 months of data
-    TRAIN_WINDOW_DAYS = 14  # The size of the training window for each epoch
-    VALID_WINDOW_DAYS = 3   # The size of the validation window for each epoch
+    TRAIN_WINDOW_DAYS = 7  # The size of the training window for each epoch
+    VALID_WINDOW_DAYS = 2   # The size of the validation window for each epoch
 
     # The initial start/end dates for the datamodule are the
     # first window of the full period. The callback will change this on subsequent epochs.
-    WINDOW_DAYS = 14  # The size of the window for each epoch
+    WINDOW_DAYS = TRAIN_WINDOW_DAYS  # The size of the window for each epoch
     initial_start_date = FULL_START_DATE
     initial_end_date = (pd.to_datetime(FULL_START_DATE) + pd.Timedelta(days=WINDOW_DAYS)).strftime("%Y-%m-%d")
 
@@ -131,8 +131,12 @@ def main():
 
     data_module = GNNDataModule(
         data_path=data_path,
-        start_date=initial_start_date,
-        end_date=initial_end_date,
+        train_start_date=TRAIN_START_DATE,      # "2024-04-01"
+        train_end_date=TRAIN_END_DATE,          # "2024-07-01"
+        val_start_date=VAL_START_DATE,          # "2024-06-01"
+        val_end_date=VAL_END_DATE,              # "2024-08-01"
+        train_window_days=TRAIN_WINDOW_DAYS,    # 14
+        val_window_days=VALID_WINDOW_DAYS,      # 3
         observation_config=observation_config,
         mesh_structure=model.mesh_structure,
         batch_size=batch_size,
@@ -201,20 +205,12 @@ def main():
         "num_sanity_val_steps": 0,
         "gradient_clip_val": 0.5,
         "enable_progress_bar": False,
+        "reload_dataloaders_every_n_epochs": 1,
     }
 
     if args.sampling_mode == "random":
         print("Using RANDOM sampling mode.")
-        callbacks.append(
-            ResampleDataCallback(
-                train_start_date=TRAIN_START_DATE,
-                train_end_date=TRAIN_END_DATE,
-                val_start_date=VAL_START_DATE,
-                val_end_date=VAL_END_DATE,
-                train_window_days=TRAIN_WINDOW_DAYS,
-                val_window_days=VALID_WINDOW_DAYS,
-            )
-        )
+        callbacks.append(ResampleDataCallback())
 
     elif args.sampling_mode == "sequential":
         print("Using SEQUENTIAL sampling mode.")
