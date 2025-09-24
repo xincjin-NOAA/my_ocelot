@@ -185,7 +185,7 @@ class GNNDataModule(pl.LightningDataModule):
             pipeline_cfg=self.hparams.pipeline,
         )
 
-        # Create val data_summary  
+        # Create val data_summary 
         print(f"[VAL SETUP] start: {initial_val_start_str}; end: {initial_val_end_str}")
         self.val_data_summary = organize_bins_times(
             self.z,
@@ -197,9 +197,9 @@ class GNNDataModule(pl.LightningDataModule):
 
         # Set bin names from respective data summaries
         self.train_bin_names = sorted(list(self.train_data_summary.keys()),
-                                     key=lambda x: int(x.replace("bin", "")))
+                                      key=lambda x: int(x.replace("bin", "")))
         self.val_bin_names = sorted(list(self.val_data_summary.keys()),
-                                   key=lambda x: int(x.replace("bin", "")))
+                                    key=lambda x: int(x.replace("bin", "")))
 
         print(f"[SETUP] train bin names: {self.train_bin_names}")
         print(f"[SETUP] val bin names: {self.val_bin_names}")
@@ -322,7 +322,7 @@ class GNNDataModule(pl.LightningDataModule):
             pipeline_cfg=self.hparams.pipeline,
         )
         self.train_bin_names = sorted(list(self.train_data_summary.keys()),
-                                     key=lambda x: int(x.replace("bin", "")))
+                                      key=lambda x: int(x.replace("bin", "")))
         print(f"[UPDATE TRAIN] New train bins: {self.train_bin_names}")
 
     def set_val_data(self, start_date, end_date):
@@ -338,7 +338,7 @@ class GNNDataModule(pl.LightningDataModule):
             pipeline_cfg=self.hparams.pipeline,
         )
         self.val_bin_names = sorted(list(self.val_data_summary.keys()),
-                                   key=lambda x: int(x.replace("bin", "")))
+                                    key=lambda x: int(x.replace("bin", "")))
         print(f"[UPDATE VAL] New val bins: {self.val_bin_names}")
 
     def train_dataloader(self):
