@@ -105,7 +105,7 @@ def main():
     hidden_dim = 64
     num_layers = 8
     lr = 0.001
-    max_epochs = 10
+    max_epochs = 100
     batch_size = 1
 
     # Autoregressive rollout (not used)
@@ -133,6 +133,12 @@ def main():
         max_rollout_steps=max_rollout_steps,
         rollout_schedule=rollout_schedule,
         feature_stats=feature_stats,
+        # Model options
+        processor_type="sliding_transformer",   # or "interaction"
+        processor_window=4,                     # 12h / 3h = 4
+        processor_depth=2,
+        processor_heads=4,
+        processor_dropout=0.0,
     )
 
     data_module = GNNDataModule(

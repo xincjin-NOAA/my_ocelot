@@ -20,6 +20,7 @@ from torch_geometric.data import HeteroData
 from typing import Dict, Tuple, List
 from torch_geometric.utils import scatter
 from loss import weighted_huber_loss
+from processor_transformer import SlidingWindowTransformerProcessor
 
 
 def _build_instrument_map(observation_config: dict) -> dict[str, int]:
@@ -58,6 +59,11 @@ class GNNLightning(pl.LightningModule):
         max_rollout_steps=1,
         rollout_schedule="step",
         feature_stats=None,
+        processor_type: str = "interaction",
+        processor_window: int = 4,
+        processor_depth: int = 2,
+        processor_heads: int = 4,
+        processor_dropout: float = 0.0,
         **kwargs,
     ):
         """
@@ -120,6 +126,23 @@ class GNNLightning(pl.LightningModule):
 
         node_types = ["mesh"]
         edge_types = [("mesh", "to", "mesh")]
+
+        # --- wire processor choice ---
+        self.processor_type = processor_type  # "interaction" | "sliding_transformer"
+
+        if self.processor_type == "sliding_transformer":
+            self.swt = SlidingWindowTransformerProcessor(
+                hidden_dim=self.hidden_dim,
+                window=processor_window,
+                depth=processor_depth,
+                num_heads=processor_heads,
+                dropout=processor_dropout,
+                use_causal_mask=True,
+            )
+        elif self.processor_type == "interaction":
+            pass  # already built self.processor above
+        else:
+            raise ValueError(f"Unknown processor_type: {processor_type!r}")
 
         for obs_type, instruments in observation_config.items():
             for inst_name, cfg in instruments.items():
@@ -506,23 +529,24 @@ class GNNLightning(pl.LightningModule):
         # --------------------------------------------------------------------
         # LATENT ROLLOUT LOOP: Sequential processor → decoder steps
         # --------------------------------------------------------------------
+        if self.processor_type == "sliding_transformer":
+            self.swt.reset()
+
         for step in range(num_latent_steps):
             self.debug(f"[LATENT] Processing step {step+1}/{num_latent_steps}")
+            # --- PROCESS: evolve mesh one step ---
+            if self.processor_type == "sliding_transformer":
+                current_mesh_features = self.swt(current_mesh_features)
+            else:  # interaction processor
+                # pure latent: mesh->mesh only
+                processor_edges = {et: ei for et, ei in data.edge_index_dict.items()
+                                if et[0] == "mesh" and et[2] == "mesh"}
 
-            # STAGE 4A: PROCESS - Evolve mesh state forward one latent step
-            step_features = encoded_features.copy()
-            step_features["mesh"] = current_mesh_features
-
-            # Create processor-only edge dict (no target edges)
-            processor_edges = {}
-            for edge_type, edge_index in data.edge_index_dict.items():
-                src_type, _, dst_type = edge_type
-                if dst_type == "mesh" or (src_type == "mesh" and dst_type == "mesh"):
-                    processor_edges[edge_type] = edge_index
-
-            # processed_features = self.processor(step_features, data.edge_index_dict)
-            processed_features = self.processor(step_features, processor_edges)
-            current_mesh_features = processed_features["mesh"]  # Update for next step
+                # STAGE 4A: PROCESS - Evolve mesh state forward one latent step
+                step_features = encoded_features.copy()
+                step_features["mesh"] = current_mesh_features
+                processed = self.processor(step_features, processor_edges)
+                current_mesh_features = processed["mesh"]
 
             self.debug(f"[LATENT] Step {step} - mesh after processor: {current_mesh_features.shape}")
 
