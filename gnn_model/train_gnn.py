@@ -139,6 +139,15 @@ def main():
         processor_depth=2,
         processor_heads=4,
         processor_dropout=0.0,
+        # Encoder/decoder choices
+        encoder_type="gat",    # or "interaction"
+        decoder_type="gat",    # or "interaction"
+        encoder_layers=2,
+        decoder_layers=2,
+        encoder_heads=4,
+        decoder_heads=4,
+        encoder_dropout=0.0,
+        decoder_dropout=0.0,
     )
 
     data_module = GNNDataModule(

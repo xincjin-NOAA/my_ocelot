@@ -21,6 +21,7 @@ from typing import Dict, Tuple, List
 from torch_geometric.utils import scatter
 from loss import weighted_huber_loss
 from processor_transformer import SlidingWindowTransformerProcessor
+from attn_bipartite import BipartiteGAT
 
 
 def _build_instrument_map(observation_config: dict) -> dict[str, int]:
@@ -59,11 +60,19 @@ class GNNLightning(pl.LightningModule):
         max_rollout_steps=1,
         rollout_schedule="step",
         feature_stats=None,
-        processor_type: str = "interaction",
+        processor_type: str = "sliding_transformer",  # "interaction" | "sliding_transformer"
         processor_window: int = 4,
         processor_depth: int = 2,
         processor_heads: int = 4,
         processor_dropout: float = 0.0,
+        encoder_type: str = "gat",     # "interaction" | "gat"
+        decoder_type: str = "gat",     # "interaction" | "gat"
+        encoder_heads: int = 4,
+        decoder_heads: int = 4,
+        encoder_layers: int = 2,
+        decoder_layers: int = 2,
+        encoder_dropout: float = 0.0,
+        decoder_dropout: float = 0.0,
         **kwargs,
     ):
         """
@@ -157,23 +166,50 @@ class GNNLightning(pl.LightningModule):
 
                 # Encoder GNN (obs -> mesh)
                 edge_type_tuple_enc = (node_type_input, "to", "mesh")
-                self.observation_encoders[self._edge_key(edge_type_tuple_enc)] = InteractionNet(
-                    edge_index=None,
-                    send_dim=hidden_dim,
-                    rec_dim=hidden_dim,
-                    hidden_layers=hidden_layers,
-                    update_edges=False,
-                )
+                enc_key = self._edge_key(edge_type_tuple_enc)
 
+                if encoder_type == "gat":
+                    enc_edge_dim = hidden_dim   # <- match the zeros you already pass in forward
+                    self.observation_encoders[enc_key] = BipartiteGAT(
+                        send_dim=hidden_dim,
+                        rec_dim=hidden_dim,
+                        hidden_dim=hidden_dim,
+                        layers=encoder_layers,
+                        heads=encoder_heads,
+                        dropout=encoder_dropout,
+                        edge_dim=enc_edge_dim,   # <- use edge_attr exactly like InteractionNet path
+                    )
+                else:
+                    self.observation_encoders[enc_key] = InteractionNet(
+                        edge_index=None,
+                        send_dim=hidden_dim,
+                        rec_dim=hidden_dim,
+                        hidden_layers=hidden_layers,
+                        update_edges=False,
+                    )
                 # Decoder GNN (mesh -> target)
                 edge_type_tuple_dec = ("mesh", "to", node_type_target)
-                self.observation_decoders[self._edge_key(edge_type_tuple_dec)] = InteractionNet(
-                    edge_index=None,
-                    send_dim=hidden_dim,
-                    rec_dim=hidden_dim,
-                    hidden_layers=hidden_layers,
-                    update_edges=False,
-                )
+                dec_key = self._edge_key(edge_type_tuple_dec)
+
+                if decoder_type == "gat":
+                    dec_edge_dim = hidden_dim   # <- same idea for decoder
+                    self.observation_decoders[dec_key] = BipartiteGAT(
+                        send_dim=hidden_dim,
+                        rec_dim=hidden_dim,
+                        hidden_dim=hidden_dim,
+                        layers=decoder_layers,
+                        heads=decoder_heads,
+                        dropout=decoder_dropout,
+                        edge_dim=dec_edge_dim,
+                    )
+                else:
+                    self.observation_decoders[dec_key] = InteractionNet(
+                        edge_index=None,
+                        send_dim=hidden_dim,
+                        rec_dim=hidden_dim,
+                        hidden_layers=hidden_layers,
+                        update_edges=False,
+                    )
 
                 # Initial MLP to project raw features to hidden_dim
                 self.observation_embedders[node_type_input] = make_mlp([input_dim] + self.mlp_blueprint_end)
@@ -409,6 +445,11 @@ class GNNLightning(pl.LightningModule):
 
                 encoder = self.observation_encoders[self._edge_key(edge_type)]
                 encoder.edge_index = edge_index
+
+                use_edge_attr = getattr(encoder, "expects_edge_attr", False)  # set on init, see below
+                edge_rep = None
+                if use_edge_attr:
+                    edge_rep = data[edge_type].edge_attr if "edge_attr" in data[edge_type] else None
 
                 # --- Debugging ---
                 self.debug(f"\n[ENC] edge type: {edge_type}")
