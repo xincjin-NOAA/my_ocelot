@@ -298,6 +298,10 @@ class GNNDataModule(pl.LightningDataModule):
                     data[node_type_target].target_channel_mask = torch.empty((0, inst_cfg["target_dim"]), dtype=torch.bool)
                     data[node_type_target].pos = torch.empty((0, 2), dtype=torch.float32)
                     data[node_type_target].num_nodes = 0
+                    data[node_type_input, "to", "mesh"].edge_index = torch.empty((2, 0), dtype=torch.long)
+                    data[node_type_input, "to", "mesh"].edge_attr = torch.empty((0, 3), dtype=torch.float32)
+                    data["mesh", "to", node_type_target].edge_index = torch.empty((2, 0), dtype=torch.long)  
+                    data["mesh", "to", node_type_target].edge_attr = torch.empty((0, 3), dtype=torch.float32)
 
         # 3. Processor edges (mesh-to-mesh)
         m2m_edge_index = self.mesh_structure["m2m_edge_index_torch"][0]
