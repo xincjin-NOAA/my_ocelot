@@ -27,7 +27,7 @@ torch.set_float32_matmul_precision("medium")
 
 @timing_resource_decorator
 def main():
-    # Corrected print statements for style
+    # Basic environment prints
     print(f"Hostname: {socket.gethostname()}")
     print(f"  SLURM_PROCID: {os.environ.get('SLURM_PROCID')}")
     print(f"  SLURM_LOCALID: {os.environ.get('SLURM_LOCALID')}")
@@ -62,7 +62,6 @@ def main():
     # === DATA & MODEL CONFIGURATION ===
     cfg_path = "configs/observation_config.yaml"
     observation_config, feature_stats, instrument_weights, channel_weights, name_to_id = load_weights_from_yaml(cfg_path)
-    # grab top-level pipeline from the same YAML
     with open(cfg_path, "r") as f:
         _raw_cfg = yaml.safe_load(f)
     pipeline_cfg = _raw_cfg.get("pipeline", {})
@@ -76,29 +75,29 @@ def main():
 
     # --- DEFINE THE FULL DATE RANGE FOR THE EXPERIMENT ---
     FULL_START_DATE = "2024-04-01"
-    FULL_END_DATE = "2024-07-01"  # e.g., 3 months of data
-    TRAIN_WINDOW_DAYS = 7  # The size of the training window for each epoch
-    VALID_WINDOW_DAYS = 1   # The size of the validation window for each epoch
+    FULL_END_DATE   = "2024-07-01"  # ~3 months
+    TRAIN_WINDOW_DAYS = 10           # training window per epoch
+    VALID_WINDOW_DAYS = 3           # validation window per epoch
+    WINDOW_DAYS = TRAIN_WINDOW_DAYS
 
-    # The initial start/end dates for the datamodule are the
-    # first window of the full period. The callback will change this on subsequent epochs.
-    WINDOW_DAYS = TRAIN_WINDOW_DAYS  # The size of the window for each epoch
-    initial_start_date = FULL_START_DATE
-    initial_end_date = (pd.to_datetime(FULL_START_DATE) + pd.Timedelta(days=TRAIN_WINDOW_DAYS)).strftime("%Y-%m-%d")
-
+    # --- Compute train/val split BEFORE using VAL_START_DATE ---
     TRAIN_VAL_SPLIT_RATIO = 0.9  # 90% train, 10% val
-
-    # Calculate total days and split
     total_days = (pd.to_datetime(FULL_END_DATE) - pd.to_datetime(FULL_START_DATE)).days
     train_days = int(total_days * TRAIN_VAL_SPLIT_RATIO)
 
     TRAIN_START_DATE = FULL_START_DATE
-    TRAIN_END_DATE = (pd.to_datetime(FULL_START_DATE) + pd.Timedelta(days=train_days)).strftime("%Y-%m-%d")
-    VAL_START_DATE = (pd.to_datetime(TRAIN_END_DATE) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")  # starting the day after train_end_date
-    VAL_END_DATE = FULL_END_DATE
+    TRAIN_END_DATE   = (pd.to_datetime(FULL_START_DATE) + pd.Timedelta(days=train_days)).strftime("%Y-%m-%d")
+    VAL_START_DATE   = (pd.to_datetime(TRAIN_END_DATE) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    VAL_END_DATE     = FULL_END_DATE
 
-    print(f"Training period: {TRAIN_START_DATE} to {TRAIN_END_DATE}")
-    print(f"Validation period: {VAL_START_DATE} to {VAL_END_DATE}")
+    print(f"Training period:  {TRAIN_START_DATE} -> {TRAIN_END_DATE}")
+    print(f"Validation period:{VAL_START_DATE} -> {VAL_END_DATE}")
+
+    # --- Initial windows for epoch 0 (DM uses these before callbacks resample) ---
+    initial_start_date     = FULL_START_DATE
+    initial_end_date       = (pd.to_datetime(FULL_START_DATE) + pd.Timedelta(days=TRAIN_WINDOW_DAYS)).strftime("%Y-%m-%d")
+    initial_val_start_date = VAL_START_DATE
+    initial_val_end_date   = (pd.to_datetime(VAL_START_DATE) + pd.Timedelta(days=VALID_WINDOW_DAYS)).strftime("%Y-%m-%d")
 
     # --- HYPERPARAMETERS ---
     mesh_resolution = 6
@@ -108,15 +107,12 @@ def main():
     max_epochs = 100
     batch_size = 1
 
-    # Autoregressive rollout (not used)
+    # Rollout settings
     max_rollout_steps = 1
     rollout_schedule = "fixed"
 
-    # Latent rollout parameters
+    # Latent rollout parameters (enable by setting integer hours)
     latent_step_hours = 3
-    # Set an integer to enable latent rollout (set to "3" for 3 hours per processor step)
-    # Set to "None" for standard processor (no latent rollout)
-    # ----------------------------------------------------
 
     start_time = time.time()
 
@@ -160,50 +156,37 @@ def main():
         num_neighbors=3,
         feature_stats=feature_stats,
         pipeline=pipeline_cfg,
-        window_size="12h",                    # pre-existing parameter, default to 12h
-        latent_step_hours=latent_step_hours,  # NEW: latent rollout parameter
+        window_size="12h",
+        latent_step_hours=latent_step_hours,
+        # ensure epoch 0 validation uses the val split, not the train slice
+        train_start=initial_start_date,
+        train_end=initial_end_date,
+        val_start=initial_val_start_date,
+        val_end=initial_val_end_date,
     )
 
-    is_main_process = os.environ.get("SLURM_PROCID", "0") == "0"
-
-    if is_main_process:
-        print("--- Main process is preparing data... ---")
-        data_module.setup("fit")
-
-    # All other processes will wait here until the main process is done
-    if torch.distributed.is_initialized():
-        torch.distributed.barrier()
-
-    if not is_main_process:
-        print(f"--- Rank {int(os.environ.get('SLURM_PROCID'))} is loading data prepared by main process... ---")
-        data_module.setup("fit")
-
+    # Let Lightning handle setup() per rank at the correct time
     setup_end_time = time.time()
-    print(f"Initial setup time: {(setup_end_time - start_time) / 60:.2f} minutes")
+    print(f"Initial setup time (pre-trainer): {(setup_end_time - start_time) / 60:.2f} minutes")
 
     logger = CSVLogger(save_dir="logs", name=f"ocelot_gnn_{args.sampling_mode}")
 
-    callbacks = []
-    # Validation Checkpoint: save the BEST model based on validation loss
-    callbacks.append(
+    callbacks = [
         ModelCheckpoint(
             dirpath="checkpoints",
             filename="gnn-epoch-{epoch:02d}-val_loss-{val_loss:.2f}",
-            save_top_k=1,  # Saves only the best one
+            save_top_k=1,
             monitor="val_loss",
             mode="min",
             save_last=True,
-        )
-    )
-    # Early stopping
-    callbacks.append(
+        ),
         EarlyStopping(
             monitor="val_loss",
             patience=10,
             mode="min",
             verbose=True,
-        )
-    )
+        ),
+    ]
 
     strategy = DDPStrategy(
         process_group_backend="nccl",
@@ -212,6 +195,7 @@ def main():
         gradient_as_bucket_view=True,
         timeout=timedelta(minutes=15),
     )
+
     trainer_kwargs = {
         "max_epochs": max_epochs,
         "accelerator": "gpu" if torch.cuda.is_available() else "cpu",
@@ -224,6 +208,8 @@ def main():
         "num_sanity_val_steps": 0,
         "gradient_clip_val": 0.5,
         "enable_progress_bar": False,
+        "reload_dataloaders_every_n_epochs": 1,   # IMPORTANT for resampling
+        "check_val_every_n_epoch": 1,
     }
 
     if args.sampling_mode == "random":
@@ -238,8 +224,7 @@ def main():
                 val_window_days=VALID_WINDOW_DAYS,
             )
         )
-
-    elif args.sampling_mode == "sequential":
+    else:
         print("Using SEQUENTIAL sampling mode.")
         callbacks.append(
             SequentialDataCallback(
@@ -250,7 +235,6 @@ def main():
         )
 
     trainer_kwargs["callbacks"] = callbacks
-    trainer_kwargs["check_val_every_n_epoch"] = 1
     trainer = pl.Trainer(**trainer_kwargs)
 
     # === TRAINING ===
@@ -265,7 +249,7 @@ def main():
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
 
-    # === Checkpoint ===
+    # === Checkpoint resume ===
     resume_path = None
     if args.resume_from_latest:
         resume_path = find_latest_checkpoint("checkpoints")

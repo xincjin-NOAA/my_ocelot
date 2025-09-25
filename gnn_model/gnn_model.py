@@ -320,17 +320,33 @@ class GNNLightning(pl.LightningModule):
         return f"{edge_type[0]}__{edge_type[1]}__{edge_type[2]}"
 
     def on_train_epoch_start(self):
-        if self.trainer.is_global_zero:
+        super().on_train_epoch_start()
+        rank = int(os.environ.get("RANK", "0"))
+
+        # One concise banner (only once on global zero)
+        if getattr(self.trainer, "is_global_zero", True):
             print(f"=== Starting Epoch {self.current_epoch} ===")
 
-        # Call set_epoch only if the distributed group is initialized
-        if is_initialized():
-            train_loaders = self.trainer.train_dataloader
-            if isinstance(train_loaders, DataLoader):
-                train_loaders = [train_loaders]
-            for loader in train_loaders:
-                if hasattr(loader, "sampler") and isinstance(loader.sampler, DistributedSampler):
-                    loader.sampler.set_epoch(self.current_epoch)
+        print(f"[Rank {rank}] === TRAIN EPOCH {self.current_epoch} START ===")
+
+        dm = self.trainer.datamodule
+        train_start = getattr(dm.hparams, "train_start", None)
+        train_end = getattr(dm.hparams, "train_end", None)
+        sum_id = id(getattr(dm, "train_data_summary", None))
+        print(f"[TrainWindow] {train_start} .. {train_end} (sum_id={sum_id})")
+
+        # reset first-batch flag for this epoch
+        self._printed_first_train_batch = False
+
+    
+    def on_validation_epoch_start(self):
+        super().on_validation_epoch_start()
+        rank = int(os.environ.get("RANK", "0"))
+        print(f"\n[Rank {rank}] === VAL EPOCH {self.current_epoch} START ===")
+        dm = self.trainer.datamodule
+        print(f"[ValWindow]   {getattr(dm.hparams, 'val_start', None)} .. {getattr(dm.hparams, 'val_end', None)} "
+              f"(sum_id={id(getattr(dm,'val_data_summary',None))})")
+        self._printed_first_val_batch = False
 
     def unnormalize_standardscaler(self, tensor, node_type, mean=None, std=None):
         """
@@ -820,9 +836,15 @@ class GNNLightning(pl.LightningModule):
             allocated = torch.cuda.memory_allocated(gpu_id) / 1024**3
             print(f"[GPU {gpu_id}] Step {batch_idx} - Memory allocated: {allocated:.2f} GB")
 
-        print(f"[training_step] batch: {batch.bin_name}")
+        # Print first-batch info for window validation
+        if not getattr(self, "_printed_first_train_batch", False):
+            bt = getattr(batch, "input_time", None) or getattr(batch, "time", None)
+            print(f"[FirstTrainBatch] batch_idx=0 time={bt}")
+            self._printed_first_train_batch = True
+        
+        print(f"[training_step] batch: {getattr(batch, 'bin_name', 'N/A')}")
 
-        # Forward pass - no step_data_list needed anymore
+        # ---- Forward pass and loss calculation ----
         all_predictions = self(batch)
 
         # Extract ground truths based on rollout mode
