@@ -249,6 +249,12 @@ class GNNLightning(pl.LightningModule):
         self.register_buffer("mesh_edge_index", _as_i64(mesh_edge_index))
         self.register_buffer("mesh_edge_attr", _as_f32(mesh_edge_attr))
 
+    def transfer_batch_to_device(self, batch, device, dataloader_idx):
+        # PyG Data/HeteroData implements .to()
+        if hasattr(batch, "to"):
+            return batch.to(device)
+        return super().transfer_batch_to_device(batch, device, dataloader_idx)
+
     def _normalize_inst_weights(self, weights_in):
         out = {}
         if not weights_in:
@@ -457,7 +463,9 @@ class GNNLightning(pl.LightningModule):
             src_type, _, dst_type = edge_type
             if dst_type == "mesh" and src_type != "mesh":  # This is an obs -> mesh edge
                 obs_features = embedded_features[src_type]
-                edge_attr = torch.zeros((edge_index.size(1), self.hidden_dim), device=self.device)
+                # Use device from input data instead of self.device to avoid checkpoint loading issues
+                device = obs_features.device if obs_features.numel() > 0 else encoded_mesh_features.device
+                edge_attr = torch.zeros((edge_index.size(1), self.hidden_dim), device=device)
 
                 encoder = self.observation_encoders[self._edge_key(edge_type)]
                 encoder.edge_index = edge_index
@@ -489,7 +497,9 @@ class GNNLightning(pl.LightningModule):
             if node_type not in encoded_features:
                 if node_type in data.node_types:
                     num_nodes = data[node_type].num_nodes
-                    encoded_features[node_type] = torch.zeros(num_nodes, self.hidden_dim, device=self.device)
+                    # Use device from existing encoded features to avoid checkpoint loading issues
+                    reference_device = encoded_mesh_features.device
+                    encoded_features[node_type] = torch.zeros(num_nodes, self.hidden_dim, device=reference_device)
 
         # --------------------------------------------------------------------
         # STAGE 4: DETECT MODE AND PROCESS
@@ -523,12 +533,14 @@ class GNNLightning(pl.LightningModule):
         for edge_type, edge_index in data.edge_index_dict.items():
             src_type, _, dst_type = edge_type
             if src_type == "mesh" and dst_type.endswith("_target"):
-                target_features_initial = torch.zeros(data[dst_type].num_nodes, self.hidden_dim, device=self.device)
+                # Use device from processed mesh features to avoid checkpoint loading issues
+                reference_device = mesh_features_processed.device
+                target_features_initial = torch.zeros(data[dst_type].num_nodes, self.hidden_dim, device=reference_device)
 
                 decoder = self.observation_decoders[self._edge_key(edge_type)]
                 decoder.edge_index = edge_index
 
-                edge_attr = torch.zeros((edge_index.size(1), self.hidden_dim), device=self.device)
+                edge_attr = torch.zeros((edge_index.size(1), self.hidden_dim), device=reference_device)
 
                 decoded_target_features = decoder(
                     send_rep=mesh_features_processed,
@@ -639,8 +651,10 @@ class GNNLightning(pl.LightningModule):
                     decoder.edge_index = step_edge_index
 
                     # Decode mesh features to target predictions
-                    target_features_initial = torch.zeros(data[step_node_type].num_nodes, self.hidden_dim, device=self.device)
-                    edge_attr = torch.zeros((step_edge_index.size(1), self.hidden_dim), device=self.device)
+                    # Use device from mesh features to avoid checkpoint loading issues
+                    reference_device = mesh_features_processed.device
+                    target_features_initial = torch.zeros(data[step_node_type].num_nodes, self.hidden_dim, device=reference_device)
+                    edge_attr = torch.zeros((step_edge_index.size(1), self.hidden_dim), device=reference_device)
 
                     decoded_target_features = decoder(
                         send_rep=mesh_features_processed,
@@ -1140,8 +1154,12 @@ class GNNLightning(pl.LightningModule):
                                 df[f"mask_{col}"] = vm_cpu[:, i]
 
                         filename = f"{out_dir}/val_{node_type}_epoch{self.current_epoch}_batch{batch_idx}_step{step}.csv"
-                        df.to_csv(filename, index=False)
-                        print(f"Saved: {filename}")
+                        try:
+                            df.to_csv(filename, index=False)
+                            print(f"Saved: {filename}")
+                        except Exception as e:
+                            if self.trainer.is_global_zero:
+                                print(f"[WARN] Could not save {filename}: {e}")
 
             # Placeholder logging for missing steps (to ensure stable CSV shape for loggers)
             num_channels = all_step_rmse[node_type][0].shape[0] if all_step_rmse[node_type] else 1
@@ -1346,9 +1364,10 @@ class GNNLightning(pl.LightningModule):
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",  # Reduce LR when the monitored metric has stopped decreasing
-            factor=0.2,  # new_lr = lr * factor (a more aggressive decay can be good)
-            patience=5,  # Number of epochs with no improvement after which LR will be reduced
+            factor=0.5,  # new_lr = lr * factor (a more aggressive decay can be good)
+            patience=3,  # Number of epochs with no improvement after which LR will be reduced
             verbose=True,  # Print a message when the LR is changed
+            min_lr=1e-6,  # safeguard against vanishing lr
         )
 
         return {

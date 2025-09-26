@@ -53,11 +53,26 @@ def main():
         action="store_true",
         help="Resume from the most recent checkpoint found",
     )
+    # Debug mode arguments
+    parser.add_argument("--debug_mode", action="store_true", help="Enable debug mode with minimal training")
+    parser.add_argument("--max_epochs", type=int, default=None, help="Override max epochs")
+    parser.add_argument("--limit_train_batches", type=int, default=None, help="Limit training batches per epoch")
+    parser.add_argument("--limit_val_batches", type=int, default=None, help="Limit validation batches per epoch")
+    parser.add_argument("--devices", type=int, default=None, help="Override number of devices/GPUs")
+    parser.add_argument("--num_nodes", type=int, default=None, help="Override number of nodes")
     args = parser.parse_args()
     faulthandler.enable()
     sys.stderr.write("===> ENTERED MAIN\n")
 
-    pl.seed_everything(42, workers=True)
+    # Use random seed for better diversity with year-long data
+    import random
+    import numpy as np
+    random_seed = random.randint(1, 1000000)
+    print(f"Using random seed: {random_seed}")
+    pl.seed_everything(random_seed, workers=True)
+    
+    # For reproducible debugging, uncomment the line below:
+    # pl.seed_everything(42, workers=True)
 
     # === DATA & MODEL CONFIGURATION ===
     cfg_path = "configs/observation_config.yaml"
@@ -71,17 +86,17 @@ def main():
     if region == "conus":
         data_path = "/scratch1/NCEPDEV/da/Ronald.McLaren/shared/ocelot/data_v2/"
     else:
-        data_path = "/scratch3/NCEPDEV/da/Ronald.McLaren/shared/ocelot/data_v5/global"
+        data_path = "/scratch3/NCEPDEV/da/Ronald.McLaren/shared/ocelot/data_v6/global"
 
     # --- DEFINE THE FULL DATE RANGE FOR THE EXPERIMENT ---
-    FULL_START_DATE = "2024-04-01"
-    FULL_END_DATE   = "2024-07-01"  # ~3 months
-    TRAIN_WINDOW_DAYS = 10           # training window per epoch
-    VALID_WINDOW_DAYS = 3           # validation window per epoch
+    FULL_START_DATE = "2022-01-01"
+    FULL_END_DATE   = "2022-12-31"  # Full year 2022
+    TRAIN_WINDOW_DAYS = 12           # 12-day windows = 23 bins (perfect for 8 GPUs: 3 bins/GPU)
+    VALID_WINDOW_DAYS = 6            # 6-day validation windows = 12 bins
     WINDOW_DAYS = TRAIN_WINDOW_DAYS
 
     # --- Compute train/val split BEFORE using VAL_START_DATE ---
-    TRAIN_VAL_SPLIT_RATIO = 0.9  # 90% train, 10% val
+    TRAIN_VAL_SPLIT_RATIO = 0.90  # 90% train (~10.8 months), 10% val (~1.2 months)
     total_days = (pd.to_datetime(FULL_END_DATE) - pd.to_datetime(FULL_START_DATE)).days
     train_days = int(total_days * TRAIN_VAL_SPLIT_RATIO)
 
@@ -99,12 +114,23 @@ def main():
     initial_val_start_date = VAL_START_DATE
     initial_val_end_date   = (pd.to_datetime(VAL_START_DATE) + pd.Timedelta(days=VALID_WINDOW_DAYS)).strftime("%Y-%m-%d")
 
+    # --- Sanity checks ---
+    ts = pd.to_datetime
+    assert ts(FULL_START_DATE) < ts(FULL_END_DATE), "FULL date range must be positive"
+    assert ts(TRAIN_START_DATE) <= ts(TRAIN_END_DATE), "Train range invalid"
+    assert ts(VAL_START_DATE)   <= ts(VAL_END_DATE),   "Val range invalid"
+    # Ensure no overlap between train and val pools
+    assert ts(VAL_START_DATE) >= ts(TRAIN_END_DATE) + pd.Timedelta(days=1), "Train/Val pools should not overlap"
+    # Ensure epoch-0 windows are within their pools
+    assert ts(initial_start_date) >= ts(TRAIN_START_DATE) and ts(initial_end_date) <= ts(TRAIN_END_DATE), "Initial train window outside pool"
+    assert ts(initial_val_start_date) >= ts(VAL_START_DATE) and ts(initial_val_end_date) <= ts(VAL_END_DATE), "Initial val window outside pool"
+
     # --- HYPERPARAMETERS ---
     mesh_resolution = 6
     hidden_dim = 64
     num_layers = 8
-    lr = 0.001
-    max_epochs = 100
+    lr = 0.0005                     # Lower LR for full year training
+    max_epochs = 200                # More epochs for full year convergence
     batch_size = 1
 
     # Rollout settings
@@ -134,7 +160,7 @@ def main():
         processor_window=4,                     # 12h / 3h = 4
         processor_depth=2,
         processor_heads=4,
-        processor_dropout=0.0,
+        processor_dropout=0.1,  # Add dropout for regularization
         # Encoder/decoder choices
         encoder_type="gat",    # or "interaction"
         decoder_type="gat",    # or "interaction"
@@ -142,8 +168,8 @@ def main():
         decoder_layers=2,
         encoder_heads=4,
         decoder_heads=4,
-        encoder_dropout=0.0,
-        decoder_dropout=0.0,
+        encoder_dropout=0.1,  # Add dropout for regularization
+        decoder_dropout=0.1,  # Add dropout for regularization
     )
 
     data_module = GNNDataModule(
@@ -179,11 +205,14 @@ def main():
             monitor="val_loss",
             mode="min",
             save_last=True,
+            every_n_epochs=2,        # Save less frequently to avoid timeout
+            save_on_train_epoch_end=False,  # Only save after validation
         ),
         EarlyStopping(
             monitor="val_loss",
-            patience=10,
+            patience=25,             # Increased patience for full year training
             mode="min",
+            min_delta=1e-5,          # Smaller threshold for year-long convergence
             verbose=True,
         ),
     ]
@@ -191,9 +220,9 @@ def main():
     strategy = DDPStrategy(
         process_group_backend="nccl",
         broadcast_buffers=False,
-        find_unused_parameters=True,
+        find_unused_parameters=False,  # Changed from True - improves performance
         gradient_as_bucket_view=True,
-        timeout=timedelta(minutes=15),
+        timeout=timedelta(hours=1),    # Increase timeout to 1 hour for checkpoints
     )
 
     trainer_kwargs = {
@@ -212,6 +241,33 @@ def main():
         "check_val_every_n_epoch": 1,
     }
 
+    # Debug mode overrides
+    if args.debug_mode:
+        print("=== DEBUG MODE ENABLED ===")
+        if args.max_epochs is not None:
+            trainer_kwargs["max_epochs"] = args.max_epochs
+        if args.limit_train_batches is not None:
+            trainer_kwargs["limit_train_batches"] = args.limit_train_batches
+        if args.limit_val_batches is not None:
+            trainer_kwargs["limit_val_batches"] = args.limit_val_batches
+        if args.devices is not None:
+            trainer_kwargs["devices"] = args.devices
+        if args.num_nodes is not None:
+            trainer_kwargs["num_nodes"] = args.num_nodes
+        # For debug mode, use simpler strategy if single device
+        if args.devices == 1 and args.num_nodes == 1:
+            trainer_kwargs["strategy"] = "auto"
+        print(f"Debug trainer config: {trainer_kwargs}")
+    
+    # Override with command line args even in non-debug mode
+    if args.max_epochs is not None and not args.debug_mode:
+        trainer_kwargs["max_epochs"] = args.max_epochs
+    if args.devices is not None and not args.debug_mode:
+        trainer_kwargs["devices"] = args.devices
+    if args.num_nodes is not None and not args.debug_mode:
+        trainer_kwargs["num_nodes"] = args.num_nodes
+
+
     if args.sampling_mode == "random":
         print("Using RANDOM sampling mode.")
         callbacks.append(
@@ -222,6 +278,9 @@ def main():
                 val_end_date=VAL_END_DATE,
                 train_window_days=TRAIN_WINDOW_DAYS,
                 val_window_days=VALID_WINDOW_DAYS,
+                mode="random",        # or "sequential"
+                resample_val=False,  # <-- FIXED validation for reliable ES/checkpointing
+                seq_stride_days=1,    # only used if mode="sequential"
             )
         )
     else:
