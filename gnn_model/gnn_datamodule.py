@@ -105,9 +105,9 @@ class GNNDataModule(pl.LightningDataModule):
         # If callbacks want separate windows, they will set these:
         # default: both train/val start with start_date..end_date
         self.hparams.train_start = pd.to_datetime(kwargs.get("train_start", start_date))
-        self.hparams.train_end   = pd.to_datetime(kwargs.get("train_end", end_date))
-        self.hparams.val_start   = pd.to_datetime(kwargs.get("val_start", start_date))
-        self.hparams.val_end     = pd.to_datetime(kwargs.get("val_end", end_date))
+        self.hparams.train_end = pd.to_datetime(kwargs.get("train_end", end_date))
+        self.hparams.val_start = pd.to_datetime(kwargs.get("val_start", start_date))
+        self.hparams.val_end = pd.to_datetime(kwargs.get("val_end", end_date))
 
     # ------------- Setup / Zarr open -------------
     def setup(self, stage=None):
@@ -304,8 +304,8 @@ class GNNDataModule(pl.LightningDataModule):
                                 )
 
                             if ("target_lat_deg_list" in inst_dict and "target_lon_deg_list" in inst_dict
-                                and step < len(inst_dict["target_lat_deg_list"])
-                                and step < len(inst_dict["target_lon_deg_list"])):
+                                    and step < len(inst_dict["target_lat_deg_list"])
+                                    and step < len(inst_dict["target_lon_deg_list"])):
                                 lat = inst_dict["target_lat_deg_list"][step]
                                 lon = inst_dict["target_lon_deg_list"][step]
                                 if len(lat) > 0 and len(lon) > 0:
@@ -398,7 +398,8 @@ class GNNDataModule(pl.LightningDataModule):
             persistent_workers=False,   # safer while debugging stale refs
             worker_init_fn=self._worker_init,
         )
-        print(f"[DL] TRAIN v{self._train_version} loader_id={id(loader)} ds_id={id(ds)} sum_id={id(self.train_data_summary)} bins={len(self.train_bin_names)}")
+        print(f"[DL] TRAIN v{self._train_version} loader_id={id(loader)} ds_id={id(ds)} "
+              f"sum_id={id(self.train_data_summary)} bins={len(self.train_bin_names)}")
         return loader
 
     def val_dataloader(self):
@@ -422,5 +423,6 @@ class GNNDataModule(pl.LightningDataModule):
             persistent_workers=False,
             worker_init_fn=self._worker_init,
         )
-        print(f"[DL] VAL   v{self._val_version} loader_id={id(loader)} ds_id={id(ds)} sum_id={id(self.val_data_summary)} bins={len(self.val_bin_names)}")
+        print(f"[DL] VAL   v{self._val_version} loader_id={id(loader)} ds_id={id(ds)} "
+              f"sum_id={id(self.val_data_summary)} bins={len(self.val_bin_names)}")
         return loader

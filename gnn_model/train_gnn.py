@@ -70,7 +70,7 @@ def main():
     random_seed = random.randint(1, 1000000)
     print(f"Using random seed: {random_seed}")
     pl.seed_everything(random_seed, workers=True)
-    
+
     # For reproducible debugging, uncomment the line below:
     # pl.seed_everything(42, workers=True)
 
@@ -90,7 +90,7 @@ def main():
 
     # --- DEFINE THE FULL DATE RANGE FOR THE EXPERIMENT ---
     FULL_START_DATE = "2022-01-01"
-    FULL_END_DATE   = "2022-12-31"  # Full year 2022
+    FULL_END_DATE = "2022-12-31"  # Full year 2022
     TRAIN_WINDOW_DAYS = 12           # 12-day windows = 23 bins (perfect for 8 GPUs: 3 bins/GPU)
     VALID_WINDOW_DAYS = 6            # 6-day validation windows = 12 bins
     WINDOW_DAYS = TRAIN_WINDOW_DAYS
@@ -101,24 +101,24 @@ def main():
     train_days = int(total_days * TRAIN_VAL_SPLIT_RATIO)
 
     TRAIN_START_DATE = FULL_START_DATE
-    TRAIN_END_DATE   = (pd.to_datetime(FULL_START_DATE) + pd.Timedelta(days=train_days)).strftime("%Y-%m-%d")
-    VAL_START_DATE   = (pd.to_datetime(TRAIN_END_DATE) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-    VAL_END_DATE     = FULL_END_DATE
+    TRAIN_END_DATE = (pd.to_datetime(FULL_START_DATE) + pd.Timedelta(days=train_days)).strftime("%Y-%m-%d")
+    VAL_START_DATE = (pd.to_datetime(TRAIN_END_DATE) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    VAL_END_DATE = FULL_END_DATE
 
     print(f"Training period:  {TRAIN_START_DATE} -> {TRAIN_END_DATE}")
     print(f"Validation period:{VAL_START_DATE} -> {VAL_END_DATE}")
 
     # --- Initial windows for epoch 0 (DM uses these before callbacks resample) ---
-    initial_start_date     = FULL_START_DATE
-    initial_end_date       = (pd.to_datetime(FULL_START_DATE) + pd.Timedelta(days=TRAIN_WINDOW_DAYS)).strftime("%Y-%m-%d")
+    initial_start_date = FULL_START_DATE
+    initial_end_date = (pd.to_datetime(FULL_START_DATE) + pd.Timedelta(days=TRAIN_WINDOW_DAYS)).strftime("%Y-%m-%d")
     initial_val_start_date = VAL_START_DATE
-    initial_val_end_date   = (pd.to_datetime(VAL_START_DATE) + pd.Timedelta(days=VALID_WINDOW_DAYS)).strftime("%Y-%m-%d")
+    initial_val_end_date = (pd.to_datetime(VAL_START_DATE) + pd.Timedelta(days=VALID_WINDOW_DAYS)).strftime("%Y-%m-%d")
 
     # --- Sanity checks ---
     ts = pd.to_datetime
     assert ts(FULL_START_DATE) < ts(FULL_END_DATE), "FULL date range must be positive"
     assert ts(TRAIN_START_DATE) <= ts(TRAIN_END_DATE), "Train range invalid"
-    assert ts(VAL_START_DATE)   <= ts(VAL_END_DATE),   "Val range invalid"
+    assert ts(VAL_START_DATE) <= ts(VAL_END_DATE), "Val range invalid"
     # Ensure no overlap between train and val pools
     assert ts(VAL_START_DATE) >= ts(TRAIN_END_DATE) + pd.Timedelta(days=1), "Train/Val pools should not overlap"
     # Ensure epoch-0 windows are within their pools
@@ -258,7 +258,7 @@ def main():
         if args.devices == 1 and args.num_nodes == 1:
             trainer_kwargs["strategy"] = "auto"
         print(f"Debug trainer config: {trainer_kwargs}")
-    
+
     # Override with command line args even in non-debug mode
     if args.max_epochs is not None and not args.debug_mode:
         trainer_kwargs["max_epochs"] = args.max_epochs
@@ -266,7 +266,6 @@ def main():
         trainer_kwargs["devices"] = args.devices
     if args.num_nodes is not None and not args.debug_mode:
         trainer_kwargs["num_nodes"] = args.num_nodes
-
 
     if args.sampling_mode == "random":
         print("Using RANDOM sampling mode.")

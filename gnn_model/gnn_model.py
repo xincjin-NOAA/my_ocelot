@@ -344,7 +344,6 @@ class GNNLightning(pl.LightningModule):
         # reset first-batch flag for this epoch
         self._printed_first_train_batch = False
 
-    
     def on_validation_epoch_start(self):
         super().on_validation_epoch_start()
         rank = int(os.environ.get("RANK", "0"))
@@ -609,7 +608,7 @@ class GNNLightning(pl.LightningModule):
             else:  # interaction processor
                 # pure latent: mesh->mesh only
                 processor_edges = {et: ei for et, ei in data.edge_index_dict.items()
-                                if et[0] == "mesh" and et[2] == "mesh"}
+                                   if et[0] == "mesh" and et[2] == "mesh"}
 
                 # STAGE 4A: PROCESS - Evolve mesh state forward one latent step
                 step_features = encoded_features.copy()
@@ -855,7 +854,7 @@ class GNNLightning(pl.LightningModule):
             bt = getattr(batch, "input_time", None) or getattr(batch, "time", None)
             print(f"[FirstTrainBatch] batch_idx=0 time={bt}")
             self._printed_first_train_batch = True
-        
+
         print(f"[training_step] batch: {getattr(batch, 'bin_name', 'N/A')}")
 
         # ---- Forward pass and loss calculation ----

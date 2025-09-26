@@ -170,10 +170,10 @@ class ResampleDataCallback(pl.Callback):
 class SequentialDataCallback(pl.Callback):
     def __init__(self, full_start_date, full_end_date, window_days: int = 7, stride_days: int = 1):
         self.full_start_date = pd.to_datetime(full_start_date)
-        self.full_end_date   = pd.to_datetime(full_end_date)
-        self.window          = pd.Timedelta(days=window_days)
-        self.stride          = pd.Timedelta(days=stride_days)
-        self.current_start   = self.full_start_date
+        self.full_end_date = pd.to_datetime(full_end_date)
+        self.window = pd.Timedelta(days=window_days)
+        self.stride = pd.Timedelta(days=stride_days)
+        self.current_start = self.full_start_date
 
         if self.full_end_date <= self.full_start_date:
             raise ValueError(

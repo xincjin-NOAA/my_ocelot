@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch_geometric.nn import GATv2Conv
 
+
 class BipartiteGAT(nn.Module):
     """
     Multi-layer GATv2 for bipartite edges (src -> dst).
@@ -29,7 +30,7 @@ class BipartiteGAT(nn.Module):
     ):
         super().__init__()
         self.layers = nn.ModuleList()
-        self.norms  = nn.ModuleList()
+        self.norms = nn.ModuleList()
         self.dropout = nn.Dropout(dropout)
 
         in_src = send_dim
@@ -87,4 +88,3 @@ class BipartiteGAT(nn.Module):
             x_src, x_dst, res0 = x_src, x_dst_new, x_dst_new
 
         return x_dst
-

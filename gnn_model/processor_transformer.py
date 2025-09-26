@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import math
 
+
 class TemporalPositionalEncoding(nn.Module):
     def __init__(self, hidden_dim: int, max_len: int):
         super().__init__()
@@ -15,11 +16,13 @@ class TemporalPositionalEncoding(nn.Module):
         T = x.size(1)
         return x + self.pe[:, :T, :]
 
+
 def _causal_mask(T: int, device: torch.device) -> torch.Tensor:
     # allow attend to <= current time only
     # [T, T] with True = -inf mask positions (nn.MultiheadAttention expects attn_mask additive or boolean)
     # Using boolean mask (True = mask)
     return torch.triu(torch.ones(T, T, dtype=torch.bool, device=device), diagonal=1)
+
 
 class TemporalBlock(nn.Module):
     def __init__(self, hidden_dim: int, num_heads: int = 4, dropout: float = 0.0):
@@ -43,6 +46,7 @@ class TemporalBlock(nn.Module):
         ff_out = self.ff(y)
         y = self.norm2(y + self.drop(ff_out))
         return y
+
 
 class SlidingWindowTransformerProcessor(nn.Module):
     """
@@ -96,4 +100,3 @@ class SlidingWindowTransformerProcessor(nn.Module):
             x_seq = blk(x_seq, attn_mask)
 
         return x_seq[:, -1, :]
-
