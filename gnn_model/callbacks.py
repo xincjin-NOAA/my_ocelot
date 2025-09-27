@@ -16,7 +16,7 @@ class ResampleDataCallback(pl.Callback):
     - Updates happen at **epoch END** so that PL's `reload_dataloaders_every_n_epochs=1`
       will pick them up at the start of the next epoch.
     - By default, VALIDATION IS FIXED (no resampling). Set `resample_val=True` to enable
-      rolling/随机 validation windows.
+      rolling,validation windows.
 
     Args
     ----
