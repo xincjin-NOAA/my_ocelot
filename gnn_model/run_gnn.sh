@@ -58,8 +58,8 @@ nvidia-smi
 
 # Launch training (env is propagated to ranks)
 srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py \
-  --sampling_mode sequential \
-  --window_mode sequential \
+  --sampling_mode random \
+  --window_mode random \
   --devices 2 --num_nodes 4
 
 # Resume training from the latest checkpoint

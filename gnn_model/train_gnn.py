@@ -137,7 +137,7 @@ def main():
     hidden_dim = 96
     num_layers = 10
     lr = 6e-4                  # pairs well with AdamW + cosine warmup
-    max_epochs = 300
+    max_epochs = 200
     batch_size = 1
 
     # Rollout settings
