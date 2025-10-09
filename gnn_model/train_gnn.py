@@ -13,7 +13,7 @@ from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.strategies import DDPStrategy
 
-from callbacks import ResampleDataCallback, SequentialDataCallback
+from callbacks import ResampleDataCallback, SequentialDataCallback, AdvanceSamplerEpoch
 from gnn_datamodule import GNNDataModule
 from gnn_model import GNNLightning
 from timing_utils import timing_resource_decorator
@@ -137,7 +137,7 @@ def main():
     hidden_dim = 96
     num_layers = 10
     lr = 6e-4                  # pairs well with AdamW + cosine warmup
-    max_epochs = 355
+    max_epochs = 300
     batch_size = 1
 
     # Rollout settings
@@ -218,24 +218,28 @@ def main():
             mode="min",
             save_last=True,
             every_n_epochs=1,
-            save_on_train_epoch_end=False,  # Only save after validation
+            save_on_train_epoch_end=False,
         ),
         EarlyStopping(
             monitor="val_loss",
-            patience=20,             # Increase patience for full year training
+            patience=50,        # good for year-long runs
             mode="min",
-            min_delta=1e-5,          # Smaller threshold for year-long convergence
+            min_delta=1e-6,
             verbose=True,
+            check_finite=True,
         ),
+        AdvanceSamplerEpoch(),
     ]
 
+
+    # For uneven data distribution, we rely on proper dataloader configuration
+    # with drop_last=False and let Lightning handle the coordination
     strategy = DDPStrategy(
         process_group_backend="nccl",
         broadcast_buffers=False,
         find_unused_parameters=False,  # Changed from True - improves performance
         gradient_as_bucket_view=True,
         timeout=timedelta(hours=1),    # Increase timeout to 1 hour for checkpoints
-        join=True,                 # <-- enable DDP Join
     )
 
     # Respect CLI overrides for devices/nodes
@@ -271,7 +275,6 @@ def main():
                 val_window_days=VALID_WINDOW_DAYS,
                 mode="random",        # train windows chosen randomly (on rank-0), then broadcast
                 resample_val=False,   # keep validation fixed for stable ES/CKPT
-                seq_stride_days=1,    # ignored in random mode
             )
         )
     else:
@@ -281,7 +284,7 @@ def main():
                 full_start_date=TRAIN_START_DATE,  # Use training pool, not full range
                 full_end_date=TRAIN_END_DATE,
                 window_days=TRAIN_WINDOW_DAYS,
-                stride_days=1,  # 1-day stride = overlap; best quality
+                stride_days=TRAIN_WINDOW_DAYS,  # Non-overlapping windows
                 mode=args.window_mode,  # "sequential" or "random"
                 wrap_sequential=True,  # Wrap to start when reaching end
             )

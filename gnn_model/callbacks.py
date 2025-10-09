@@ -45,6 +45,25 @@ def log_rank_header(stage: str, epoch: int):
         gpu_id = -1
     print(f"[GRank {global_rank} | LRank {local_rank} | Node {node_rank} | GPU {gpu_id}] === {stage} EPOCH {epoch} START ===")
 
+class AdvanceSamplerEpoch(pl.Callback):
+    """Ensure random samplers reshuffle each epoch."""
+    def on_train_epoch_start(self, trainer, pl_module):
+        # Try to grab the actual dataloader object Lightning is iterating
+        dl = None
+        if hasattr(trainer.fit_loop, "epoch_loop") and hasattr(trainer.fit_loop.epoch_loop, "_loader"):
+            dl = getattr(trainer.fit_loop.epoch_loop._loader, "_dataloader", None)
+        if dl is None and hasattr(trainer.fit_loop, "_combined_loader"):
+            dl = getattr(trainer.fit_loop._combined_loader, "_loader", None)
+
+        if dl is None:
+            return  # can't find it; nothing to do
+
+        dls = dl if isinstance(dl, (list, tuple)) else [dl]
+        for d in dls:
+            s = getattr(d, "sampler", None)
+            if hasattr(s, "set_epoch"):
+                s.set_epoch(pl_module.current_epoch)
+
 # -----------------------------
 # Train resampling per epoch (SYNCED)
 # -----------------------------

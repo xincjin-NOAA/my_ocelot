@@ -13,168 +13,66 @@ from torch.utils.data import Sampler
 from nnja_adapter import build_zlike_from_df
 from process_timeseries import extract_features, organize_bins_times
 from create_mesh_graph_global import obs_mesh_conn
+import random
 
+def _ddp_world():
+    if dist.is_available() and dist.is_initialized():
+        return dist.get_world_size(), dist.get_rank()
+    return 1, 0
+
+class BalancedSequentialShard(Sampler[int]):
+    """Contiguous shards, uneven allowed, no padding, no drop_last."""
+    def __init__(self, num_samples: int, num_replicas: int=None, rank: int=None):
+        if num_samples < 1:
+            raise ValueError("BalancedSequentialShard: num_samples must be >= 1")
+        ws, rk = _ddp_world()
+        self.num_replicas = ws if num_replicas is None else num_replicas
+        self.rank         = rk if rank is None else rank
+        self.total        = num_samples
+
+        base = self.total // self.num_replicas
+        rem  = self.total %  self.num_replicas
+        self.num_local = base + (1 if self.rank < rem else 0)
+
+        start = self.rank * base + min(self.rank, rem)
+        end   = start + self.num_local
+        self._indices = list(range(self.total))[start:end]
+
+    def __iter__(self): return iter(self._indices)
+    def __len__(self):  return self.num_local
+    def set_epoch(self, _:int): pass
+
+class BalancedRandomShard(Sampler[int]):
+    """Shuffled shards per epoch, uneven allowed, no padding, no drop_last."""
+    def __init__(self, num_samples: int, seed: int=0, num_replicas: int=None, rank: int=None):
+        if num_samples < 1:
+            raise ValueError("BalancedRandomShard: num_samples must be >= 1")
+        ws, rk = _ddp_world()
+        self.num_replicas = ws if num_replicas is None else num_replicas
+        self.rank         = rk if rank is None else rank
+        self.total        = num_samples
+        self.seed         = seed
+        self.epoch        = 0
+
+        base = self.total // self.num_replicas
+        rem  = self.total %  self.num_replicas
+        self.num_local = base + (1 if self.rank < rem else 0)
+
+        self._start = self.rank * base + min(self.rank, rem)
+        self._end   = self._start + self.num_local
+
+    def __iter__(self):
+        g = torch.Generator()
+        g.manual_seed(self.seed + self.epoch)
+        order = torch.randperm(self.total, generator=g).tolist()
+        return iter(order[self._start:self._end])
+
+    def __len__(self):  return self.num_local
+    def set_epoch(self, epoch:int): self.epoch = epoch
 
 def _t32(x):
     return x.float() if torch.is_tensor(x) else torch.as_tensor(x, dtype=torch.float32)
 
-
-from torch.utils.data import Sampler
-import torch.distributed as dist
-
-from torch.utils.data import Sampler
-import torch.distributed as dist
-from math import ceil
-import random
-
-class RandomDistributedSampler(Sampler[int]):
-    """
-    Random distributed sampler that shuffles indices and distributes them across ranks.
-    Each rank gets a different random subset of bins for each epoch.
-    """
-
-    def __init__(self,
-                 num_samples: int,
-                 num_replicas: int = None,
-                 rank: int = None,
-                 seed: int = 0,
-                 drop_last: bool = False,
-                 pad: bool = True):
-        if not (dist.is_available() and dist.is_initialized()):
-            num_replicas = 1
-            rank = 0
-        else:
-            if num_replicas is None:
-                num_replicas = dist.get_world_size()
-            if rank is None:
-                rank = dist.get_rank()
-
-        if num_samples < 1:
-            raise ValueError("RandomDistributedSampler: num_samples must be >= 1")
-
-        self.num_replicas = num_replicas
-        self.rank = rank
-        self.total_size = num_samples
-        self.drop_last = drop_last
-        self.pad = pad
-        self.seed = seed
-        self.epoch = 0
-
-        # Calculate indices per rank
-        if self.drop_last:
-            # Drop incomplete batches - each rank gets same number of samples
-            self.num_samples = self.total_size // self.num_replicas
-        else:
-            # Distribute evenly with padding if needed
-            self.num_samples = (self.total_size + self.num_replicas - 1) // self.num_replicas
-
-    def __iter__(self):
-        # Create random indices based on epoch and seed
-        generator = torch.Generator()
-        generator.manual_seed(self.seed + self.epoch)
-        
-        # Create shuffled indices
-        indices = torch.randperm(self.total_size, generator=generator).tolist()
-        
-        # Pad to make it evenly divisible by num_replicas if needed
-        if self.pad and len(indices) % self.num_replicas != 0:
-            padding_size = self.num_replicas - len(indices) % self.num_replicas
-            # Randomly sample from existing indices for padding
-            padding_indices = [indices[i % len(indices)] for i in range(padding_size)]
-            indices += padding_indices
-
-        # Distribute indices across ranks
-        indices = indices[self.rank::self.num_replicas]
-        
-        # Ensure we don't exceed num_samples
-        indices = indices[:self.num_samples]
-        
-        # Safety: ensure at least one sample per rank (only if not drop_last)
-        if not self.drop_last and len(indices) == 0 and self.total_size > 0:
-            # Fallback: give this rank a random index
-            generator = torch.Generator()
-            generator.manual_seed(self.seed + self.epoch + self.rank)
-            indices = [torch.randint(0, self.total_size, (1,), generator=generator).item()]
-
-        return iter(indices)
-
-    def __len__(self):
-        return self.num_samples
-
-    def set_epoch(self, epoch: int):
-        """
-        Set the epoch for this sampler. When shuffle=True, this ensures all replicas
-        use a different random ordering for each epoch.
-        """
-        self.epoch = epoch
-
-
-class SequentialContiguousDistributedSampler(Sampler[int]):
-    """
-    Contiguous, ordered shards per rank. Pads the global index list so that
-    every rank gets at least 1 sample (prevents zero-length loaders).
-    """
-
-    def __init__(self,
-                 num_samples: int,
-                 num_replicas: int = None,
-                 rank: int = None,
-                 drop_last: bool = False,   # accepted for API compatibility
-                 pad: bool = False):
-        if not (dist.is_available() and dist.is_initialized()):
-            num_replicas = 1
-            rank = 0
-        else:
-            if num_replicas is None:
-                num_replicas = dist.get_world_size()
-            if rank is None:
-                rank = dist.get_rank()
-
-        if num_samples < 1:
-            raise ValueError("SequentialContiguousDistributedSampler: num_samples must be >= 1")
-
-        self.num_replicas = num_replicas
-        self.rank = rank
-        self.total_size = num_samples
-        self.drop_last = drop_last
-        self.pad = pad
-
-        # Build the global, ordered index list
-        indices = list(range(self.total_size))
-
-        if self.drop_last:
-            # Drop incomplete batches - calculate how many samples we can evenly distribute
-            samples_per_rank = len(indices) // self.num_replicas
-            total_usable = samples_per_rank * self.num_replicas
-            indices = indices[:total_usable]
-        elif self.pad and len(indices) < self.num_replicas:
-            # Ensure every rank has at least one element by padding with the last index
-            pad_count = self.num_replicas - len(indices)
-            indices += [indices[-1]] * pad_count  # duplicate last index
-
-        # Compute per-rank contiguous slice sizes
-        if len(indices) == 0:
-            self._indices = []
-        else:
-            per_rank = ceil(len(indices) / self.num_replicas) if not self.drop_last else len(indices) // self.num_replicas
-            start = self.rank * per_rank
-            end = min(start + per_rank, len(indices))
-            self._indices = indices[start:end]
-
-            # Safety: never return empty on any rank (only if not drop_last)
-            if not self.drop_last and len(self._indices) == 0 and len(indices) > 0:
-                # fallback: give this rank the last index
-                self._indices = [indices[-1]]
-
-    def __iter__(self):
-        return iter(self._indices)
-
-    def __len__(self):
-        return len(self._indices)
-
-    def set_epoch(self, epoch: int):
-        # no-op (order fixed)
-        pass
 
 # -------------------------
 # Dataset per bin
@@ -698,56 +596,40 @@ class GNNDataModule(pl.LightningDataModule):
 
         world_size = dist.get_world_size() if dist.is_available() and dist.is_initialized() else 1
         rank = dist.get_rank() if dist.is_available() and dist.is_initialized() else 0
+        n = len(self.train_bin_names)
 
-        # Choose sampler based on sampling mode
         if self.hparams.sampling_mode == "random":
-            sampler = RandomDistributedSampler(
-                num_samples=len(self.train_bin_names),
-                num_replicas=world_size,
-                rank=rank,
-                seed=42,  # Fixed seed for reproducible random distribution across epochs
-                drop_last=False,  # Drop incomplete batches to avoid padding
-            )
-            sampler_type = "Random"
+            sampler = BalancedRandomShard(n, seed=42, num_replicas=world_size, rank=rank)
+            sampler_type = "BalancedRandomShard"
         else:
-            sampler = SequentialContiguousDistributedSampler(
-                num_samples=len(self.train_bin_names),
-                num_replicas=world_size,
-                rank=rank,
-                # drop_last=True,  # Drop incomplete batches to avoid padding
-            )
-            sampler_type = "Sequential"
+            sampler = BalancedSequentialShard(n, num_replicas=world_size, rank=rank)
+            sampler_type = "BalancedSequentialShard"
 
         loader = PyGDataLoader(
             ds,
             batch_size=self.hparams.batch_size,
-            shuffle=False,              # IMPORTANT: we provide sampler
-            sampler=sampler,            # <— use appropriate sampler based on mode
+            shuffle=False,
+            sampler=sampler,
             num_workers=4,
             pin_memory=True,
             persistent_workers=False,
             worker_init_fn=self._worker_init,
         )
-        
-        # Enhanced logging to show sampling mode
-        first_bin = self.train_bin_names[sampler._indices[0]] if len(sampler) and hasattr(sampler, '_indices') else None
-        last_bin = self.train_bin_names[sampler._indices[-1]] if len(sampler) and hasattr(sampler, '_indices') else None
-        
-        # For RandomDistributedSampler, we need to get indices differently
-        if self.hparams.sampling_mode == "random":
-            # Get first few indices from the sampler
-            sample_indices = list(sampler)[:min(3, len(sampler))]
-            first_bin = self.train_bin_names[sample_indices[0]] if sample_indices else None
-            last_bin = self.train_bin_names[sample_indices[-1]] if len(sample_indices) > 1 else first_bin
-            # Reset the sampler iterator
+
+        # Safe preview of a couple indices for logging (works for both samplers)
+        idx_preview = list(iter(sampler))
+        first_bin = self.train_bin_names[idx_preview[0]] if idx_preview else None
+        last_bin  = self.train_bin_names[idx_preview[-1]] if idx_preview else None
+
+        # (Optional) if random, initialize epoch=0 here; Lightning won't call set_epoch for custom samplers
+        if isinstance(sampler, BalancedRandomShard):
             sampler.set_epoch(0)
-        
+
         print(f"[DL] TRAIN window={self.hparams.train_start.date()}..{self.hparams.train_end.date()} "
-              f"bins={len(self.train_bin_names)} "
-              f"rank={rank}/{world_size} -> idx[{len(sampler)}] "
-              f"first={first_bin} last={last_bin} "
-              f"sampler={sampler_type}")
+            f"bins={n} rank={rank}/{world_size} -> idx[{len(sampler)}] "
+            f"first={first_bin} last={last_bin} sampler={sampler_type}")
         return loader
+
 
     def val_dataloader(self):
         if not self.val_bin_names:
@@ -764,32 +646,28 @@ class GNNDataModule(pl.LightningDataModule):
         )
 
         world_size = dist.get_world_size() if dist.is_available() and dist.is_initialized() else 1
-        rank = dist.get_rank() if dist.is_available() and dist.is_initialized() else 0
+        rank = dist.get_rank()       if dist.is_available() and dist.is_initialized() else 0
+        n = len(self.val_bin_names)
 
-        # For validation, always use sequential sampling for consistency and reproducibility
-        # This ensures validation results are comparable across runs
-        sampler = SequentialContiguousDistributedSampler(
-            num_samples=len(self.val_bin_names),
-            num_replicas=world_size,
-            rank=rank,
-            # pad=True 
-        )
+        sampler = BalancedSequentialShard(n, num_replicas=world_size, rank=rank)
 
         loader = PyGDataLoader(
             ds,
             batch_size=self.hparams.batch_size,
-            shuffle=False,              # IMPORTANT
-            sampler=sampler,            # <— always use sequential for validation
+            shuffle=False,
+            sampler=sampler,
             num_workers=4,
             pin_memory=True,
             persistent_workers=False,
             worker_init_fn=self._worker_init,
         )
+
+        idx_preview = list(iter(sampler))
+        first_bin = self.val_bin_names[idx_preview[0]] if idx_preview else None
+        last_bin  = self.val_bin_names[idx_preview[-1]] if idx_preview else None
+
         print(f"[DL] VAL   window={self.hparams.val_start.date()}..{self.hparams.val_end.date()} "
-              f"bins={len(self.val_bin_names)} "
-              f"rank={rank}/{world_size} -> idx[{len(sampler)}] "
-              f"first={self.val_bin_names[sampler._indices[0]] if len(sampler) else None} "
-              f"last={self.val_bin_names[sampler._indices[-1]] if len(sampler) else None} "
-              f"sampler=Sequential")
+            f"bins={n} rank={rank}/{world_size} -> idx[{len(sampler)}] "
+            f"first={first_bin} last={last_bin} sampler=BalancedSequentialShard")
         return loader
 

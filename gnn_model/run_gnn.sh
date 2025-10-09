@@ -60,8 +60,7 @@ nvidia-smi
 srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py \
   --sampling_mode sequential \
   --window_mode sequential \
-  --devices 2 --num_nodes 4 \
-  --max_epochs 200
+  --devices 2 --num_nodes 4
 
 # Resume training from the latest checkpoint
 # srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py --resume_from_latest
