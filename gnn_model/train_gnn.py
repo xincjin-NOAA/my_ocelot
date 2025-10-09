@@ -43,6 +43,13 @@ def main():
         help="The data sampling strategy ('random' or 'sequential').",
     )
     parser.add_argument(
+        "--window_mode",
+        type=str,
+        default="sequential",
+        choices=["random", "sequential"],
+        help="For sequential sampling: window selection mode ('random' for random windows, 'sequential' for sliding windows).",
+    )
+    parser.add_argument(
         "--resume_from_checkpoint",
         type=str,
         default=None,
@@ -86,13 +93,13 @@ def main():
     if region == "conus":
         data_path = "/scratch1/NCEPDEV/da/Ronald.McLaren/shared/ocelot/data_v2/"
     else:
-        data_path = "/scratch3/NCEPDEV/da/Ronald.McLaren/shared/ocelot/data_v5/global"
+        data_path = "/scratch3/NCEPDEV/da/Ronald.McLaren/shared/ocelot/data_v6/global"
 
     # --- DEFINE THE FULL DATE RANGE FOR THE EXPERIMENT ---
-    FULL_START_DATE = "2024-04-01"
-    FULL_END_DATE = "2024-07-01"  # e.g., 3 months of data
-    TRAIN_WINDOW_DAYS = 7  # The size of the training window for each epoch
-    VALID_WINDOW_DAYS = 2   # The size of the validation window for each epoch
+    FULL_START_DATE = "2022-01-01"
+    FULL_END_DATE = "2022-12-31"
+    TRAIN_WINDOW_DAYS = 12  # The size of the training window for each epoch
+    VALID_WINDOW_DAYS = 8   # The size of the validation window for each epoch
     WINDOW_DAYS = TRAIN_WINDOW_DAYS
 
     # --- Compute train/val split BEFORE using VAL_START_DATE ---
@@ -127,15 +134,16 @@ def main():
 
     # --- HYPERPARAMETERS ---
     mesh_resolution = 6
-    hidden_dim = 64
-    num_layers = 8
-    lr = 0.001
-    max_epochs = 200
+    hidden_dim = 96
+    num_layers = 10
+    lr = 6e-4                  # pairs well with AdamW + cosine warmup
+    max_epochs = 355
     batch_size = 1
 
     # Rollout settings
     max_rollout_steps = 1
     rollout_schedule = "fixed"
+    
 
     # Latent rollout parameters (enable by setting integer hours)
     latent_step_hours = 3
@@ -156,16 +164,16 @@ def main():
         rollout_schedule=rollout_schedule,
         feature_stats=feature_stats,
         # Model options
-        processor_type="interaction",   # sliding_transformer or "interaction"
+        processor_type="sliding_transformer",   # sliding_transformer or "interaction"
         processor_window=4,                     # 12h / 3h = 4
-        processor_depth=4,
-        processor_heads=4,
+        processor_depth=6,
+        processor_heads=8,
         processor_dropout=0.1,  # Add dropout for regularization
         # Dropout settings
         node_dropout=0.03,      # Slight node dropout for Phase 2 regularization
         # Encoder/decoder choices
-        encoder_type="interaction",    # gat or "interaction"
-        decoder_type="interaction",    # or "interaction"
+        encoder_type="gat",    # gat or "interaction"
+        decoder_type="gat",    # or "interaction"
         encoder_layers=2,
         decoder_layers=2,
         encoder_heads=4,
@@ -187,6 +195,7 @@ def main():
         window_size="12h",
         latent_step_hours=latent_step_hours,
         train_val_split_ratio=TRAIN_VAL_SPLIT_RATIO,  # Pass the split ratio from training script
+        sampling_mode=args.sampling_mode,  # Pass sampling mode to control bin distribution
         # ensure epoch 0 validation uses the val split, not the train slice
         train_start=initial_start_date,
         train_end=initial_end_date,
@@ -208,12 +217,12 @@ def main():
             monitor="val_loss",
             mode="min",
             save_last=True,
-            every_n_epochs=2,        # Save less frequently to avoid timeout
+            every_n_epochs=1,
             save_on_train_epoch_end=False,  # Only save after validation
         ),
         EarlyStopping(
             monitor="val_loss",
-            patience=10,             # Increase patience for full year training
+            patience=20,             # Increase patience for full year training
             mode="min",
             min_delta=1e-5,          # Smaller threshold for year-long convergence
             verbose=True,
@@ -226,26 +235,32 @@ def main():
         find_unused_parameters=False,  # Changed from True - improves performance
         gradient_as_bucket_view=True,
         timeout=timedelta(hours=1),    # Increase timeout to 1 hour for checkpoints
+        join=True,                 # <-- enable DDP Join
     )
+
+    # Respect CLI overrides for devices/nodes
+    devices = args.devices if args.devices is not None else 2
+    num_nodes = args.num_nodes if args.num_nodes is not None else 4
 
     trainer_kwargs = {
         "max_epochs": max_epochs,
         "accelerator": "gpu" if torch.cuda.is_available() else "cpu",
-        "devices": 2,
-        "num_nodes": 4,
+        "devices": devices,
+        "num_nodes": num_nodes,
         "strategy": strategy,
         "precision": "16-mixed",
         "log_every_n_steps": 1,
         "logger": logger,
         "num_sanity_val_steps": 0,
-        "gradient_clip_val": 0.5,
+        "gradient_clip_val": 0.8,      # transformers like a touch more
         "enable_progress_bar": False,
         "reload_dataloaders_every_n_epochs": 1,   # IMPORTANT for resampling
         "check_val_every_n_epoch": 1,
+        "accumulate_grad_batches": 2,  # effective batch ~2
     }
 
     if args.sampling_mode == "random":
-        print("Using RANDOM sampling mode.")
+        print("Using RANDOM sampling mode (SYNCHRONIZED across ranks).")
         callbacks.append(
             ResampleDataCallback(
                 train_start_date=TRAIN_START_DATE,
@@ -254,18 +269,21 @@ def main():
                 val_end_date=VAL_END_DATE,
                 train_window_days=TRAIN_WINDOW_DAYS,
                 val_window_days=VALID_WINDOW_DAYS,
-                mode="random",        # or "sequential"
-                resample_val=False,  # Validation for reliable ES/checkpointing
-                seq_stride_days=1,    # only used if mode="sequential"
+                mode="random",        # train windows chosen randomly (on rank-0), then broadcast
+                resample_val=False,   # keep validation fixed for stable ES/CKPT
+                seq_stride_days=1,    # ignored in random mode
             )
         )
     else:
-        print("Using SEQUENTIAL sampling mode.")
+        print(f"Using SEQUENTIAL sampling mode with {args.window_mode} windows (synchronized across ranks).")
         callbacks.append(
             SequentialDataCallback(
-                full_start_date=FULL_START_DATE,
-                full_end_date=FULL_END_DATE,
-                window_days=WINDOW_DAYS,
+                full_start_date=TRAIN_START_DATE,  # Use training pool, not full range
+                full_end_date=TRAIN_END_DATE,
+                window_days=TRAIN_WINDOW_DAYS,
+                stride_days=1,  # 1-day stride = overlap; best quality
+                mode=args.window_mode,  # "sequential" or "random"
+                wrap_sequential=True,  # Wrap to start when reaching end
             )
         )
 
@@ -274,15 +292,8 @@ def main():
 
     # === TRAINING ===
     if torch.cuda.is_available():
-        print(
-            f"GPU {torch.cuda.current_device()} memory allocated:",
-            torch.cuda.memory_allocated() / 1024**3,
-            "GB",
-        )
-        local_rank = int(os.environ.get("LOCAL_RANK", 0))
-        torch.cuda.set_device(local_rank)
+        print("CUDA available. Lightning will set devices per rank.")
         torch.cuda.empty_cache()
-        torch.cuda.synchronize()
 
     # === Checkpoint resume ===
     resume_path = None

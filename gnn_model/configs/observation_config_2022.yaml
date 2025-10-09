@@ -2,10 +2,10 @@ pipeline:
   subsample:
     seed: 12345
     satellite:         
-      _default: 30     # default for any unspecified instrument
-      atms: 10         # keep every N-th sample (stride); stride or keep ~1/N of samples uniformly (random)
-      avhrr: 100
-      amsua: 5   
+      _default: 20     # default for any unspecified instrument
+      atms: 6          # OPTIMIZED: ~70M/6 = ~11.6M obs per 12h window (based on actual data)
+      # avhrr: 100     # COMMENTED OUT - no AVHRR data for 2022  
+      amsua: 2         # OPTIMIZED: Balance with ATMS - reduce from ~750k to ~375k obs per 12h window   
     conventional:
       _default: 1
       surface_obs: 1
@@ -15,30 +15,33 @@ pipeline:
         _default: random  # "stride" | "random" | "none"
         atms: random
         amsua: random
-        avhrr: random
+        # avhrr: random  # COMMENTED OUT - no AVHRR data for 2022
       conventional:
         _default: random
-        # snow_cover: none    # ignore subsampling for snow_cover
+        # snow_cover: none    # COMMENTED OUT - no snow_cover_2022 in data_v6
 
 
 instrument_weights:
-  atms: 1.0
-  amsua: 1.0
-  avhrr: 1.0
-  surface_obs: 1.0
-  # snow_cover: 1.0
+  atms: 1.0                       # Equal weight - balanced data volumes
+  amsua: 1.2                      # Slightly higher - more mature instrument with consistent performance  
+  surface_obs: 2.0                # Higher weight - critical for surface analysis and needs more attention
+  # avhrr: 1.0                    # COMMENTED OUT - no AVHRR data for 2022
+  # snow_cover: 1.0               # COMMENTED OUT - no snow_cover_2022 in data_v6
 
 channel_weights:
-  atms: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] 
-  amsua: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-  avhrr: [1.0, 1.0, 1.0]
-  surface_obs: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]   # one per predicted feature (6)
-  # snow_cover: [1.0]            # snowDepth
+  # Optimized ATMS weights based on statistical stability and NWP importance
+  atms: [1.0, 1.0, 1.1, 1.3, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.9, 1.0, 1.1, 1.2, 1.2, 0.8, 0.7, 1.0, 1.1, 1.2, 1.3, 1.2] 
+  # Optimized AMSUA weights - boost stable temperature sounding channels, reduce noisy ones
+  amsua: [0.9, 0.8, 1.2, 1.4, 1.3, 1.4, 1.5, 1.3, 1.2, 1.2, 1.0, 1.1, 1.2, 1.1, 0.7]
+  # Enhanced surface obs weights - emphasize temperature and pressure
+  surface_obs: [1.8, 1.5, 1.2, 1.0, 1.1, 1.1]   # [pressure, temp, dewpoint, RH, wind_u, wind_v]
+  # avhrr: [1.0, 1.0, 1.0]       # COMMENTED OUT - no AVHRR data for 2022
+  # snow_cover: [1.0]            # COMMENTED OUT - no snow_cover_2022 in data_v6
 
 observation_config:
   satellite:
     atms:
-      zarr_name: atms_2022
+      zarr_name: atms_2022        # Updated for 2022-specific zarr file
       sat_ids: [224, 225]
       features: [bt_channel_1, bt_channel_2, bt_channel_3, bt_channel_4, bt_channel_5,
                  bt_channel_6, bt_channel_7, bt_channel_8, bt_channel_9, bt_channel_10,
@@ -63,15 +66,15 @@ observation_config:
       encoder_hidden_layers: 2
       decoder_hidden_layers: 2
 
-    avhrr:
-      zarr_name: avhrr_2022
-      sat_ids: [3, 5, 209, 223]
-      features: [brightnessTemperature_ch_50, brightnessTemperature_ch_51, brightnessTemperature_ch_52]
-      metadata: [satelliteZenithAngle, solarZenithAngle]
-      input_dim: 12
-      target_dim: 3
-      encoder_hidden_layers: 2
-      decoder_hidden_layers: 2
+    # COMMENTED OUT - no AVHRR data for 2022
+    # avhrr:
+    #   sat_ids: [3, 5, 209, 223]
+    #   features: [brightnessTemperature_ch_50, brightnessTemperature_ch_51, brightnessTemperature_ch_52]
+    #   metadata: [satelliteZenithAngle, solarZenithAngle]
+    #   input_dim: 12
+    #   target_dim: 3
+    #   encoder_hidden_layers: 2
+    #   decoder_hidden_layers: 2
 
   conventional:
     surface_obs:

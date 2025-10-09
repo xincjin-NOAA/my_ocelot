@@ -2,6 +2,7 @@ import lightning.pytorch as pl
 import os
 import time
 import torch
+import math
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributed import is_initialized
@@ -1395,23 +1396,34 @@ class GNNLightning(pl.LightningModule):
             self.debug(f"[DEBUG] Total Gradient Norm: {total_grad_norm:.6f}")
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=1e-5)
-
-        # This scheduler monitors the validation loss and reduces the LR when it plateaus
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode="min",  # Reduce LR when the monitored metric has stopped decreasing
-            factor=0.5,  # new_lr = lr * factor (conservative decay; lower factor is more aggressive)
-            patience=3,  # Number of epochs with no improvement after which LR will be reduced
-            verbose=True,  # Print a message when the LR is changed
-            min_lr=1e-6,  # safeguard against vanishing lr
+        # Use AdamW for better stability on long runs
+        optimizer = torch.optim.AdamW(
+            self.parameters(),
+            lr=self.lr,
+            weight_decay=getattr(self, "weight_decay", 0.05),
+            betas=(0.9, 0.98),
+            eps=1e-8,
         )
+
+        # Cosine annealing with warmup
+        total_epochs = getattr(self.trainer, "max_epochs", 300)
+        warmup_epochs = 5
+
+        def lr_lambda(epoch):
+            if epoch < warmup_epochs:
+                return epoch / float(max(1, warmup_epochs))  # Linear warmup
+            progress = (epoch - warmup_epochs) / float(max(1, total_epochs - warmup_epochs))
+            return 0.5 * (1.0 + math.cos(math.pi * progress))  # Cosine decay
+
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+        print(f"[Optimizer] AdamW lr={self.lr}, weight_decay={optimizer.param_groups[0]['weight_decay']}")
+        print(f"[Scheduler] CosineLR with {warmup_epochs} warmup epochs and {total_epochs} total epochs")
 
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "val_loss",  # The metric to monitor
                 "interval": "epoch",
                 "frequency": 1,
             },
