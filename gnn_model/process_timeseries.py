@@ -147,13 +147,15 @@ def organize_bins_times(
             idx_parts = []
             if obs_type == "satellite":
                 conf_sat_ids = np.asarray(observation_config[obs_type][key]["sat_ids"])
+                # Handle different satellite ID field names
+                sat_id_field = "satelliteId" if "satelliteId" in z else "satelliteIdentifier"
                 for i0 in range(0, n_total, chunk):
                     i1 = min(i0 + chunk, n_total)
                     t = time_arr[i0:i1]
                     m_time = (t >= t0) & (t < t1)
                     if not m_time.any():
                         continue
-                    sats = z["satelliteId"][i0:i1]
+                    sats = z[sat_id_field][i0:i1]
                     m = m_time & np.isin(sats, conf_sat_ids)
                     if m.any():
                         idx_parts.append(np.flatnonzero(m) + i0)
