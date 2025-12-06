@@ -158,7 +158,7 @@ def create_yearly_data(start_date: datetime,
                        output_type: str = 'parquet',
                        suffix: str = None,
                        append: bool = True) -> None:
-     """Create zarr files from BUFR data in year long chunks."""
+    """Create zarr files from BUFR data in year long chunks."""
     
     bufr.mpi.App(sys.argv)
     comm = bufr.mpi.Comm("world")
@@ -266,6 +266,7 @@ if __name__ == "__main__":
     end_date = datetime.strptime(args.end_date, "%Y-%m-%d")
 
     if args.output_type == 'zarr':
-        create_yearly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
+        # create_yearly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
+        create_monthly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
     elif args.output_type == 'parquet':
         create_weekly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
