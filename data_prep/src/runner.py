@@ -64,8 +64,11 @@ class Runner(object):
 class TankRunner(Runner):
     """Runner for traditional BUFR tank files."""
 
-    def run(self, comm, parameters: Parameters) -> bufr.DataContainer:
-        combined_container = bufr.DataContainer()
+    def run(self, comm, parameters: Parameters, seperate: bool = False) -> bufr.DataContainer:
+        if seperate:
+            combined_container = {}
+        else:
+            combined_container = bufr.DataContainer()
 
         if isinstance(self.type_config.paths, list):
             for day_str in self._day_strs(parameters.start_time, parameters.stop_time):
@@ -75,11 +78,18 @@ class TankRunner(Runner):
                     if not os.path.exists(input_path):
                         print(f"Input path {input_path} does not exist! Skipping it.")
                         continue
+                    if seperate:
+                        cycle_key = path.split("/")[0]
+                        if cycle_key not in combined_container:
+                            combined_container[cycle_key] = bufr.DataContainer()
 
                     container = self._make_obs(comm, input_path)
 
                     container.gather(comm)
-                    combined_container.append(container)
+                    if seperate:
+                        combined_container[cycle_key].append(container)
+                    else:
+                        combined_container.append(container)
         elif isinstance(self.type_config.paths, dict):
             for day_str in self._day_strs(parameters.start_time, parameters.stop_time):
                 for path_idx in range(len(list(self.type_config.paths.values())[0])):
@@ -94,9 +104,16 @@ class TankRunner(Runner):
 
                         input_dict[key] = input_path
 
+                    if seperate:
+                        cycle_key = rel_path.split("/")[0]
+                        if cycle_key not in combined_container:
+                            combined_container[cycle_key] = bufr.DataContainer()
                     container = self._make_obs(comm, input_dict)
                     container.gather(comm)
-                    combined_container.append(container)
+                    if seperate:
+                        combined_container[cycle_key].append(container)
+                    else:
+                        combined_container.append(container)
 
         return combined_container
 
@@ -117,8 +134,11 @@ class PcaRunner(Runner):
         super().__init__(data_type, cfg)
         self.regex = re.compile(self.type_config.filename_regex)
 
-    def run(self, comm, parameters: Parameters) -> bufr.DataContainer:
-        combined_container = bufr.DataContainer()
+    def run(self, comm, parameters: Parameters, seperate: bool = False) -> bufr.DataContainer:
+        if seperate:
+            combined_container = {}
+        else:
+            combined_container = bufr.DataContainer()
         directory = self.type_config.directory
 
         for fname in os.listdir(directory):
@@ -137,12 +157,20 @@ class PcaRunner(Runner):
             input_path = os.path.join(directory, fname)
             container = self._make_obs(comm, input_path)
             container.gather(comm)
-            combined_container.append(container)
+            
+            if seperate:
+                # Extract cycle from filename (use hour as cycle key)
+                cycle_key = start_str[8:10]  # Extract hour (HH) from YYYYMMDDHHMMSS
+                if cycle_key not in combined_container:
+                    combined_container[cycle_key] = bufr.DataContainer()
+                combined_container[cycle_key].append(container)
+            else:
+                combined_container.append(container)
 
         return combined_container
 
 
-def run(comm, data_type, parameters: Parameters, cfg=config.Config()) -> (bufr.encoders.Description, bufr.DataContainer):
+def run(comm, data_type, parameters: Parameters, seperate: bool = False, cfg=config.Config()) -> (bufr.encoders.Description, bufr.DataContainer):
     type_cfg = cfg.get_data_type(data_type)
     if type_cfg.type == 'tank':
         runner = TankRunner(data_type, cfg)
@@ -151,4 +179,4 @@ def run(comm, data_type, parameters: Parameters, cfg=config.Config()) -> (bufr.e
     else:
         raise ValueError(f"Unknown data type {type_cfg.type}")
 
-    return (runner.get_encoder_description(), runner.run(comm, parameters))
+    return (runner.get_encoder_description(), runner.run(comm, parameters, seperate))

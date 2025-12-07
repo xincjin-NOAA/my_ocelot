@@ -8,6 +8,7 @@ import bufr
 sys.path.insert(0, os.path.realpath('/'))
 from zarr_encoder import Encoder as ZarrEncoder  # noqa: E402
 from parquet_encoder import Encoder as ParquetEncoder  # noqa: E402
+from cycle_parquet_encoder import Encoder as CycleParquetEncoder  # noqa: E402
 import runner  # noqa: E402
 import settings  # noqa: E402
 
@@ -217,7 +218,8 @@ def _create_data_for_day(comm,
     parameters.start_time = start_datetime
     parameters.stop_time = end_datetime
 
-    description, container = runner.run(comm, data_type, parameters)
+    seperate = output_type == 'cycle_parquet'
+    description, container = runner.run(comm, data_type, parameters, seperate=seperate)
 
     if container is None:
         raise ValueError("No data found")
@@ -225,25 +227,46 @@ def _create_data_for_day(comm,
     # Filter data based on the specified latitude and longitude ranges
     # if the settings have been defined
     if hasattr(settings, 'LAT_RANGE') and hasattr(settings, 'LON_RANGE'):
-        latitudes = container.get('latitude')
-        longitudes = container.get('longitude')
+        if isinstance(container, dict):
+            # Handle dict of containers (cycle_parquet case)
+            for cycle_key, cycle_container in container.items():
+                latitudes = cycle_container.get('latitude')
+                longitudes = cycle_container.get('longitude')
 
-        mask = np.array([True] * len(latitudes))
-        mask[latitudes < settings.LAT_RANGE[0]] = False
-        mask[latitudes > settings.LAT_RANGE[1]] = False
-        mask[longitudes < settings.LON_RANGE[0]] = False
-        mask[longitudes > settings.LON_RANGE[1]] = False
+                mask = np.array([True] * len(latitudes))
+                mask[latitudes < settings.LAT_RANGE[0]] = False
+                mask[latitudes > settings.LAT_RANGE[1]] = False
+                mask[longitudes < settings.LON_RANGE[0]] = False
+                mask[longitudes > settings.LON_RANGE[1]] = False
 
-        if not np.any(mask):
-            return  # No data in the region
+                if np.any(mask):
+                    cycle_container.apply_mask(mask)
+        else:
+            # Handle single container
+            latitudes = container.get('latitude')
+            longitudes = container.get('longitude')
 
-        container.apply_mask(mask)
+            mask = np.array([True] * len(latitudes))
+            mask[latitudes < settings.LAT_RANGE[0]] = False
+            mask[latitudes > settings.LAT_RANGE[1]] = False
+            mask[longitudes < settings.LON_RANGE[0]] = False
+            mask[longitudes > settings.LON_RANGE[1]] = False
+
+            if not np.any(mask):
+                return  # No data in the region
+
+            container.apply_mask(mask)
 
     if comm.rank() == 0:
+        # Format date string for partitioning (YYYY-MM-DD)
+        date_str = date.strftime("%Y-%m-%d")
+        
         if output_type == 'zarr':
             ZarrEncoder(description).encode(container, f'{output_path}', append=append)
         elif output_type == 'parquet':
             ParquetEncoder(description).encode(container, f'{output_path}', append=append)
+        elif output_type == 'cycle_parquet':
+            CycleParquetEncoder(description).encode(container, f'{output_path}', append=append, date=date_str)
         else:
             raise ValueError(f"Unsupported output type: {output_type}")
 
@@ -269,4 +292,4 @@ if __name__ == "__main__":
         # create_yearly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
         create_monthly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
     elif args.output_type == 'parquet':
-        create_weekly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
+        create_yearly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
