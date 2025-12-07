@@ -65,11 +65,20 @@ class Encoder(bufr.encoders.EncoderBase):
             # Partition by date first, then cycle (order matters for directory structure)
             partition_cols = ['date', 'cycle'] if date is not None else ['cycle']
             
+            # Debug: Print partition info
+            print(f"Writing partitioned dataset with columns: {partition_cols}")
+            print(f"Combined table schema: {combined_table.schema}")
+            print(f"Number of rows: {len(combined_table)}")
+            if date is not None:
+                print(f"Unique dates: {combined_table['date'].unique().to_pylist()}")
+            print(f"Unique cycles: {combined_table['cycle'].unique().to_pylist()}")
+            
             pq.write_to_dataset(
                 combined_table,
                 root_path=output_template_path,
                 partition_cols=partition_cols,
-                existing_data_behavior='overwrite_or_ignore' if append else 'delete_matching'
+                existing_data_behavior='overwrite_or_ignore' if append else 'delete_matching',
+                basename_template='part-{i}.parquet'
             )
 
         return result
