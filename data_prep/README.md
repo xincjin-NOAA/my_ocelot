@@ -67,3 +67,25 @@ use it you can do the following:
 5) `python gen_data.py -b 2024-04-01 2024-04-07 "atms" -s "my_suffix"` Please define a special suffix if you are playing
 around as you will replace the existing data. Please note that the output directory for the data is defined by the 
 `configs/local_settings.py` file.
+
+
+Single file conversion:
+
+```bash
+python netcdf_reader.py diag_atms_n21_ges.2024011200.nc output.parquet
+```
+Single file with date partitioning:
+
+```bash
+python netcdf_reader.py diag_atms_n21_ges.2024011200.nc output_dir/ --partition
+```
+Batch processing multiple files:
+
+```bash
+python netcdf_reader.py \
+    "/path/to/diag_atms_n21_ges.{date}.nc" \
+    output_dir/ \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-31 \
+    --partition
+```
