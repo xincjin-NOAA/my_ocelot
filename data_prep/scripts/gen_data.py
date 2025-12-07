@@ -211,7 +211,7 @@ if __name__ == "__main__":
     parser.add_argument('start_date', help='Start date in YYYY-MM-DD format')
     parser.add_argument('end_date', help='End date in YYYY-MM-DD format')
     parser.add_argument('type', choices=choices, help='Data type to generate. "all" generates all data types.')
-    parser.add_argument("output_type", choices=['zarr', 'parquet'], help='Output file type')
+    parser.add_argument("output_type", choices=['zarr', 'parquet', 'cycle_parquet'], help='Output file type')
     parser.add_argument('-s', '--suffix', required=False, help='Suffix for the output file(s)')
     parser.add_argument('-p', '--parallel', action='store_true', help='Run in parallel (using either srun or mpirun).')
     parser.add_argument('-b', '--batch', action='store_true', help='Run in batch mode (using sbatch). Chunks the data into multiple tasks if needed.')
