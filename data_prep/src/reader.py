@@ -279,7 +279,7 @@ if __name__ == "__main__":
     parser.add_argument('start_date')
     parser.add_argument('end_date')
     parser.add_argument('type')
-    parser.add_argument('output_type', choices=['zarr', 'parquet'], help='Output file type')
+    parser.add_argument('output_type', choices=['zarr', 'parquet', 'cycle_parquet'], help='Output file type')
     parser.add_argument('-s', '--suffix', required=False, help='Suffix for the output file(s)')
     parser.add_argument('-a', '--append', action='store_true', help='Append to existing data')
 
@@ -291,5 +291,5 @@ if __name__ == "__main__":
     if args.output_type == 'zarr':
         # create_yearly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
         create_monthly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
-    elif args.output_type == 'parquet':
+    elif args.output_type == 'cycle_parquet':
         create_yearly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)

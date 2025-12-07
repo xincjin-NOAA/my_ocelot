@@ -41,12 +41,17 @@ class Encoder(bufr.encoders.EncoderBase):
         date: str, optional
             If provided, adds a date column and partitions by date first, then cycle.
         """
+        print(f"CycleParquetEncoder.encode called with date={date}")
+        print(f"Container type: {type(container)}")
+        print(f"Container keys: {container.keys() if isinstance(container, dict) else 'Not a dict'}")
+        
         result: dict = {}
         
         # Collect all tables with cycle information
         all_tables = []
         
         for cycle_key, cycle_container in container.items():
+            print(f"Processing cycle: {cycle_key}")
             for category in cycle_container.all_sub_categories():
                 substitutions = {}
                 for idx, key in enumerate(cycle_container.get_category_map().keys()):
