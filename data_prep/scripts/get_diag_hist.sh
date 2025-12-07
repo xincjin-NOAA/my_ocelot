@@ -1,7 +1,15 @@
 #!/bin/sh -xvf
 
-bdate=2024010100
-edate=2024010318
+# Check if arguments are provided
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <bdate> <edate>"
+    echo "  bdate: Begin date in YYYYMMDDHH format (e.g., 2024010100)"
+    echo "  edate: End date in YYYYMMDDHH format (e.g., 2024010318)"
+    exit 1
+fi
+
+bdate=$1
+edate=$2
 cdate=${bdate}
 
 expid=GDAS-ops
