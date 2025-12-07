@@ -140,7 +140,17 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None) -> No
     # Add observation variables (same for all channels, so take every nchans-th value)
     # Assuming data is organized as: [obs1_ch1, obs1_ch2, ..., obs1_chN, obs2_ch1, obs2_ch2, ...]
     for output_name, netcdf_name in obs_variables:
-        table_data[output_name] = pa.array(data[netcdf_name][::nchans])
+        var_data = data[netcdf_name][::nchans]
+        
+        # Handle character arrays (2D) - convert to strings
+        if var_data.ndim > 1:
+            # Convert character array to string array
+            if isinstance(var_data[0], np.ndarray):
+                var_data = np.array([''.join(row).strip() for row in var_data])
+            else:
+                var_data = np.array([str(item).strip() for item in var_data])
+        
+        table_data[output_name] = pa.array(var_data)
     
     # Reshape observations into separate columns for each channel
     # Reshape from (nobs,) to (n_unique_obs, nchans)
