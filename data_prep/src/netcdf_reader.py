@@ -6,8 +6,6 @@ import numpy as np
 import netCDF4 as nc
 
 sys.path.insert(0, os.path.realpath('/'))
-from parquet_encoder import Encoder as ParquetEncoder  # noqa: E402
-import settings  # noqa: E402
 
 
 def read_netcdf_diag(file_path: str) -> dict:
