@@ -123,7 +123,6 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None) -> No
     # Define observation variables to extract (same for all channels)
     # These will be sampled at every nchans-th value
     obs_variables = [
-        ('observation_class', 'Observation_Class'),
         ('latitude', 'Latitude'),
         ('longitude', 'Longitude'),
         ('elevation', 'Elevation'),
