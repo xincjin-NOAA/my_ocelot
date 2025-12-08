@@ -102,3 +102,58 @@ python netcdf_reader.py 2024-01-01 2024-01-31 atms parquet
 ```
 
 **Note:** Satellite IDs, cycles, and paths are all configured in `netcdf_obs_config.yaml`
+
+### Output Structure
+
+The NetCDF reader creates **date and cycle partitioned** Parquet files:
+
+```
+output_dir/
+  atms/
+    date=2024-01-01/
+      cycle=00/
+        part-0.parquet  # Contains ALL satellites (n20, n21, npp) for 2024-01-01 00Z
+      cycle=06/
+        part-0.parquet  # Contains ALL satellites for 2024-01-01 06Z
+      cycle=12/
+        part-0.parquet
+      cycle=18/
+        part-0.parquet
+    date=2024-01-02/
+      cycle=00/
+        part-0.parquet
+      ...
+```
+
+**Key points:**
+- **Partitioned by date and cycle**: Each date/cycle combination gets its own partition
+- **All satellites combined**: Each partition contains data from all configured satellites (n20, n21, npp)
+- **Columns include:**
+  - `date` (partition key, format: YYYY-MM-DD)
+  - `cycle` (partition key, format: HH - 00, 06, 12, 18)
+  - `sat_id` (satellite identifier: n20, n21, npp, etc.)
+  - `latitude`, `longitude`, `elevation`, etc.
+  - `observation_ch1`, `observation_ch2`, ..., `observation_ch22` (for ATMS)
+
+**Example query:**
+```python
+import pandas as pd
+
+# Read all data
+df = pd.read_parquet('output_dir/atms')
+
+# Filter by date
+df_jan01 = df[df['date'] == '2024-01-01']
+
+# Filter by cycle
+df_00z = df[df['cycle'] == '00']
+
+# Filter by satellite
+df_n21 = df[df['sat_id'] == 'n21']
+
+# Filter by date and cycle
+df_jan01_00z = df[(df['date'] == '2024-01-01') & (df['cycle'] == '00')]
+
+# Filter by all three
+df_specific = df[(df['date'] == '2024-01-01') & (df['cycle'] == '00') & (df['sat_id'] == 'n21')]
+```

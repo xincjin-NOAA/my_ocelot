@@ -86,7 +86,7 @@ def read_netcdf_diag(file_path: str, config: dict = None) -> dict:
     return data
 
 
-def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, sat_id: str = None, config: dict = None) -> None:
+def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle: str = None, sat_id: str = None, config: dict = None) -> None:
     """Convert NetCDF diagnostic file to Parquet format.
     
     Parameters
@@ -97,6 +97,8 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, sat_i
         Path to output Parquet file or directory
     date : str, optional
         Date string for partitioning (YYYY-MM-DD format)
+    cycle : str, optional
+        Cycle string for partitioning (e.g., '00', '06', '12', '18')
     sat_id : str, optional
         Satellite ID (e.g., 'n21', 'n20', 'npp')
     config : dict, optional
@@ -130,6 +132,10 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, sat_i
     # Add date column if provided (for partitioning)
     if date is not None:
         table_data['date'] = pa.array([date] * n_unique_obs)
+    
+    # Add cycle column if provided (for partitioning)
+    if cycle is not None:
+        table_data['cycle'] = pa.array([cycle] * n_unique_obs)
     
     # Add sat_id column if provided
     if sat_id is not None:
@@ -168,16 +174,39 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, sat_i
     
     # Write to parquet
     if date is not None:
-        # Write as partitioned dataset (append mode to combine multiple sat_ids)
+        # Write as partitioned dataset by date and cycle
+        # All satellites for the same date/cycle go into the same partition
         os.makedirs(output_path, exist_ok=True)
+        
+        # Determine partition columns
+        partition_cols = ['date']
+        if cycle is not None:
+            partition_cols.append('cycle')
+        
+        # Read existing data in this partition if it exists
+        if cycle is not None:
+            partition_dir = os.path.join(output_path, f"date={date}", f"cycle={cycle}")
+        else:
+            partition_dir = os.path.join(output_path, f"date={date}")
+        
+        if os.path.exists(partition_dir):
+            # Read existing data and append
+            existing_table = pq.read_table(partition_dir)
+            table = pa.concat_tables([existing_table, table])
+            # Remove old partition files before writing
+            import shutil
+            shutil.rmtree(partition_dir)
+        
         pq.write_to_dataset(
             table,
             root_path=output_path,
-            partition_cols=['date'],
+            partition_cols=partition_cols,
             existing_data_behavior='overwrite_or_ignore',
             basename_template='part-{i}.parquet'
         )
-        print(f"Written partitioned parquet to: {output_path}")
+        
+        partition_path = "/".join([f"{col}={date if col == 'date' else cycle}" for col in partition_cols])
+        print(f"Written partitioned parquet to: {output_path}/{partition_path}")
     else:
         # Write as single file (append if exists to combine multiple sat_ids)
         if os.path.exists(output_path):
@@ -277,6 +306,7 @@ def process_netcdf_files(start_date: datetime,
                         input_file,
                         output_path,
                         date=date_partition if partition_by_date else None,
+                        cycle=cycle if partition_by_date else None,
                         sat_id=sat_id,
                         config=config
                     )
