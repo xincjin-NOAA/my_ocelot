@@ -114,9 +114,9 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle
     if config is None:
         config = load_config()
     
-    # Extract obs_type from input_file path (e.g., diag_atms_n21_ges.2024010100.nc4)
+    # Extract obs_type from input_file path (e.g., diag_atms_n21_ges.2024010100.nc4, diag_cris-fsr_n21_ges.2024010100.nc4)
     import re
-    match = re.search(r'diag_([a-z]+)_', os.path.basename(input_file))
+    match = re.search(r'diag_([a-z\-]+)_', os.path.basename(input_file))
     if match:
         obs_type = match.group(1)
     else:
