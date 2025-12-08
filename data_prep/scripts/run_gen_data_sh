@@ -1,0 +1,13 @@
+#!/bin/bash
+# Script to generate AVHRR Zarr data for all months in 2024
+
+YEAR=2024
+MONTHS=(01 02 03 04 05 06 07 08 09 10 11 12)
+
+for MONTH in "${MONTHS[@]}"; do
+    # Determine the last day of the month
+    LAST_DAY=$(date -d "$YEAR-$MONTH-01 +1 month -1 day" +%d)
+    
+    # Run the Python command
+    python gen_data.py "$YEAR-$MONTH-01" "$YEAR-$MONTH-$LAST_DAY" avhrr zarr -b --slurm_account da-cpu
+done
