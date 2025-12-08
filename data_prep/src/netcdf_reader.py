@@ -371,7 +371,7 @@ if __name__ == "__main__":
         raise ValueError("Output base directory not configured in config file under base_dirs.output")
     
     # Create output directory with obs_type subdirectory
-    output_path = os.path.join(output_path, args.type)
+    output_path = os.path.join(output_path, args.type + ".parquet")
     
     # Get satellite IDs and cycles from config for this obs_type
     sat_ids = None
