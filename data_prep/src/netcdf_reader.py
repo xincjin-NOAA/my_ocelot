@@ -192,7 +192,21 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle
         if os.path.exists(partition_dir):
             # Read existing data and append
             existing_table = pq.read_table(partition_dir)
-            table = pa.concat_tables([existing_table, table])
+            
+            # Ensure schemas are compatible by promoting to a unified schema
+            try:
+                table = pa.concat_tables([existing_table, table], promote_options='permissive')
+            except Exception as e:
+                print(f"Warning: Schema mismatch when appending. Existing schema: {existing_table.schema}")
+                print(f"New schema: {table.schema}")
+                print(f"Error: {e}")
+                # Try to unify schemas by converting to pandas and back
+                import pandas as pd
+                df_existing = existing_table.to_pandas()
+                df_new = table.to_pandas()
+                df_combined = pd.concat([df_existing, df_new], ignore_index=True)
+                table = pa.Table.from_pandas(df_combined)
+            
             # Remove old partition files before writing
             import shutil
             shutil.rmtree(partition_dir)
@@ -212,7 +226,18 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle
         if os.path.exists(output_path):
             # Read existing data and append
             existing_table = pq.read_table(output_path)
-            table = pa.concat_tables([existing_table, table])
+            
+            # Ensure schemas are compatible
+            try:
+                table = pa.concat_tables([existing_table, table], promote_options='permissive')
+            except Exception as e:
+                print(f"Warning: Schema mismatch when appending. Using pandas fallback.")
+                import pandas as pd
+                df_existing = existing_table.to_pandas()
+                df_new = table.to_pandas()
+                df_combined = pd.concat([df_existing, df_new], ignore_index=True)
+                table = pa.Table.from_pandas(df_combined)
+        
         pq.write_table(table, output_path)
         print(f"Written parquet file to: {output_path}")
 
