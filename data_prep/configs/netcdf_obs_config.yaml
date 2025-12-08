@@ -1,5 +1,12 @@
 # Configuration for NetCDF observation data processing
 
+# Base directories
+base_dirs:
+  # Input base directory containing gdas.YYYYMMDD subdirectories
+  input: "/scratch5/purged/Xin.C.Jin/my_ocelot/diag"
+  # Output base directory for parquet files
+  output: "/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/nc_global"
+
 # Observation types and their associated satellite IDs
 observations:
   atms:

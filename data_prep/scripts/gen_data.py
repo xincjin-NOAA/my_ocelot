@@ -8,9 +8,20 @@ base_path = os.path.split(os.path.realpath(__file__))[0]
 sys.path.append(os.path.realpath(os.path.join(base_path, '..', 'src')))
 
 
-def get_reader_path(data_type: str) -> str:
-    """Return path to the unified reader script."""
-    return os.path.realpath(os.path.join(base_path, '../src/reader.py'))
+def get_reader_path(data_type: str, reader_type: str = 'bufr') -> str:
+    """Return path to the reader script.
+    
+    Parameters
+    ----------
+    data_type : str
+        Type of data to process
+    reader_type : str
+        Type of reader: 'bufr' for reader.py or 'netcdf' for netcdf_reader.py
+    """
+    if reader_type == 'netcdf':
+        return os.path.realpath(os.path.join(base_path, '../src/netcdf_reader.py'))
+    else:
+        return os.path.realpath(os.path.join(base_path, '../src/reader.py'))
 
 
 def _is_slurm_available() -> bool:
@@ -114,6 +125,8 @@ def _make_serial_cmd(reader_path: str,
     return cmd
 
 
+
+
 def _split_datetime_range(start: datetime, end: datetime, num_days: int) -> list:
     """
     Split the datetime range into chunks of num_days days.
@@ -200,6 +213,8 @@ def _serial_gen(reader_path: str,
     os.system(cmd)
 
 
+
+
 if __name__ == "__main__":
     from config import Config
     config = Config()
@@ -217,6 +232,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--batch', action='store_true', help='Run in batch mode (using sbatch). Chunks the data into multiple tasks if needed.')
     parser.add_argument('-a', '--append', action='store_true', help='Append to existing data')
     parser.add_argument('--slurm_account', required=False, help='SLURM account name for batch jobs')
+    parser.add_argument('--netcdf', action='store_true', help='Use netcdf_reader.py instead of reader.py')
 
     args = parser.parse_args()
 
@@ -225,7 +241,12 @@ if __name__ == "__main__":
 
     def call_generator(gen_type):
         type_config = config.get_data_type(gen_type)
-        reader_path = get_reader_path(type_config.type)
+        
+        # Determine which reader to use
+        reader_type = 'netcdf' if args.netcdf else 'bufr'
+        reader_path = get_reader_path(type_config.type, reader_type)
+        
+        # Use the same logic for both readers (they now have the same CLI interface)
         if args.batch:
             _batch_gen(reader_path,
                        start_date,
