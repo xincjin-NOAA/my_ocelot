@@ -33,13 +33,15 @@ def load_config(config_path: str = None) -> dict:
     return config
 
 
-def read_netcdf_diag(file_path: str, config: dict = None) -> dict:
+def read_netcdf_diag(file_path: str, obs_type: str, config: dict = None) -> dict:
     """Read NetCDF diagnostic file and return data as a dictionary.
     
     Parameters
     ----------
     file_path : str
         Path to the NetCDF file
+    obs_type : str
+        Observation type (e.g., 'atms', 'cris')
     config : dict, optional
         Configuration dictionary. If None, loads default config.
         
@@ -61,9 +63,10 @@ def read_netcdf_diag(file_path: str, config: dict = None) -> dict:
         print(f"Reading NetCDF file: {file_path}")
         print(f"  nchans: {nchans}, nobs: {nobs}")
         
-        # Get variable lists from config
-        channel_vars = config.get('channel_vars', [])
-        obs_vars = config.get('obs_vars', [])
+        # Get variable lists from observation-specific config
+        obs_config = config.get('observations', {}).get(obs_type, {})
+        channel_vars = obs_config.get('channel_vars', [])
+        obs_vars = obs_config.get('obs_vars', [])
         
         # Read channel information
         for var_name in channel_vars:
@@ -111,8 +114,16 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle
     if config is None:
         config = load_config()
     
+    # Extract obs_type from input_file path (e.g., diag_atms_n21_ges.2024010100.nc4)
+    import re
+    match = re.search(r'diag_([a-z]+)_', os.path.basename(input_file))
+    if match:
+        obs_type = match.group(1)
+    else:
+        raise ValueError(f"Could not extract observation type from filename: {input_file}")
+    
     # Read NetCDF data
-    data = read_netcdf_diag(input_file, config)
+    data = read_netcdf_diag(input_file, obs_type, config)
     
     nchans = data['nchans']
     nobs = data['nobs']
@@ -141,8 +152,9 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle
     if sat_id is not None:
         table_data['sat_id'] = pa.array([sat_id] * n_unique_obs)
     
-    # Get output variables from config
-    output_variables = config.get('output_variables', {})
+    # Get output variables from observation-specific config
+    obs_config = config.get('observations', {}).get(obs_type, {})
+    output_variables = obs_config.get('output_variables', {})
     
     # Add observation variables (same for all channels, so take every nchans-th value)
     # Assuming data is organized as: [obs1_ch1, obs1_ch2, ..., obs1_chN, obs2_ch1, obs2_ch2, ...]

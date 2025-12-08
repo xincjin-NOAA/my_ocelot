@@ -7,6 +7,50 @@ base_dirs:
   # Output base directory for parquet files
   output: "/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/nc_global"
 
+# Default channel variables (used by all observation types)
+default_channel_vars: &default_channel_vars
+  - chaninfoidx
+  - frequency
+  - polarization
+  - wavenumber
+  - error_variance
+  - mean_lapse_rate
+  - use_flag
+  - sensor_chan
+  - satinfo_chan
+
+# Default observation variables (used by most observation types)
+default_obs_vars: &default_obs_vars
+  - Channel_Index
+  - Observation_Class
+  - Latitude
+  - Longitude
+  - Elevation
+  - Obs_Time
+  - Scan_Position
+  - Sat_Zenith_Angle
+  - Sat_Azimuth_Angle
+  - Sol_Zenith_Angle
+  - Sol_Azimuth_Angle
+  - Sun_Glint_Angle
+  - Scan_Angle
+  - Water_Fraction  # Only used by IASI, but harmless for others (won't be in output if not mapped)
+  - Observation
+
+# Default output variables (used by most observation types)
+# Format: output_column_name: NetCDF_Variable_Name
+default_output_variables: &default_output_vars
+  latitude: Latitude
+  longitude: Longitude
+  obs_time: Obs_Time
+  scan_position: Scan_Position
+  sat_zenith_angle: Sat_Zenith_Angle
+  sat_azimuth_angle: Sat_Azimuth_Angle
+  sol_zenith_angle: Sol_Zenith_Angle
+  sol_azimuth_angle: Sol_Azimuth_Angle
+  sun_glint_angle: Sun_Glint_Angle
+  scan_angle: Scan_Angle
+
 # Observation types and their associated satellite IDs
 observations:
   atms:
@@ -15,24 +59,97 @@ observations:
       - n21
       - npp
     description: "Advanced Technology Microwave Sounder"
+    
+    # Channel information variables (dimension: nchans)
+    channel_vars: *default_channel_vars
+    
+    # Observation data variables (dimension: nobs)
+    obs_vars: *default_obs_vars
+    
+    # Variables to include in output Parquet file
+    output_variables: *default_output_vars
   
-  # Add more observation types as needed
-  # Example:
-  # cris:
-  #   sat_ids:
-  #     - n20
-  #     - n21
-  #     - npp
-  #   description: "Cross-track Infrared Sounder"
+  amsua:
+    sat_ids:
+      - n15
+      - n18
+      - n19
+      - metop-b
+      - metop-c
+    description: "Advanced Microwave Sounding Unit-A"
+    
+    # Channel information variables (dimension: nchans = 15)
+    channel_vars: *default_channel_vars
+    
+    # Observation data variables (dimension: nobs)
+    obs_vars: *default_obs_vars
+    
+    # Variables to include in output Parquet file
+    output_variables: *default_output_vars
   
-  # amsua:
-  #   sat_ids:
-  #     - n15
-  #     - n18
-  #     - n19
-  #     - metop-a
-  #     - metop-b
-  #   description: "Advanced Microwave Sounding Unit-A"
+  avhrr:
+    sat_ids:
+      - n18
+      - n19
+      - metop-b
+      - metop-c
+    description: "Advanced Very High Resolution Radiometer"
+    
+    # Channel information variables (dimension: nchans = 3)
+    channel_vars: *default_channel_vars
+    
+    # Observation data variables (dimension: nobs)
+    obs_vars: *default_obs_vars
+    
+    # Variables to include in output Parquet file
+    output_variables: *default_output_vars
+  
+  ssmis:
+    sat_ids:
+      - f17
+    description: "Special Sensor Microwave Imager/Sounder"
+    
+    # Channel information variables (dimension: nchans = 24)
+    channel_vars: *default_channel_vars
+    
+    # Observation data variables (dimension: nobs)
+    obs_vars: *default_obs_vars
+    
+    # Variables to include in output Parquet file
+    output_variables: *default_output_vars
+  
+  iasi:
+    sat_ids:
+      - metop-b
+      - metop-c
+    description: "Infrared Atmospheric Sounding Interferometer"
+    
+    # Channel information variables (dimension: nchans = 616)
+    channel_vars: *default_channel_vars
+    
+    # Observation data variables (dimension: nobs)
+    obs_vars: *default_obs_vars  # Includes Water_Fraction
+    
+    # Variables to include in output Parquet file
+    # IASI has additional water_fraction variable
+    output_variables:
+      <<: *default_output_vars
+      water_fraction: Water_Fraction
+  
+  cris-fsr:
+    sat_ids:
+      - n20
+      - n21
+    description: "Cross-track Infrared Sounder - Full Spectral Resolution"
+    
+    # Channel information variables (dimension: nchans = 431)
+    channel_vars: *default_channel_vars
+    
+    # Observation data variables (dimension: nobs)
+    obs_vars: *default_obs_vars
+    
+    # Variables to include in output Parquet file
+    output_variables: *default_output_vars
 
 # Default cycles to process
 default_cycles:
@@ -51,49 +168,3 @@ file_pattern: "diag_{obs_type}_{sat_id}_ges.{date_cycle}.nc4"
 # {date} will be replaced with YYYYMMDD
 # {cycle} will be replaced with HH (00, 06, 12, 18)
 dir_pattern: "gdas.{date}/{cycle}/atmos"
-
-# NetCDF variable definitions
-# Channel information variables (dimension: nchans)
-channel_vars:
-  - chaninfoidx
-  - frequency
-  - polarization
-  - wavenumber
-  - error_variance
-  - mean_lapse_rate
-  - use_flag
-  - sensor_chan
-  - satinfo_chan
-
-# Observation data variables (dimension: nobs)
-# These are read from NetCDF but not all are written to output
-obs_vars:
-  - Channel_Index
-  - Observation_Class
-  - Latitude
-  - Longitude
-  - Elevation
-  - Obs_Time
-  - Scan_Position
-  - Sat_Zenith_Angle
-  - Sat_Azimuth_Angle
-  - Sol_Zenith_Angle
-  - Sol_Azimuth_Angle
-  - Sun_Glint_Angle
-  - Scan_Angle
-  - Observation
-
-# Variables to include in output Parquet file
-# Format: output_column_name: NetCDF_Variable_Name
-output_variables:
-  latitude: Latitude
-  longitude: Longitude
-  elevation: Elevation
-  obs_time: Obs_Time
-  scan_position: Scan_Position
-  sat_zenith_angle: Sat_Zenith_Angle
-  sat_azimuth_angle: Sat_Azimuth_Angle
-  sol_zenith_angle: Sol_Zenith_Angle
-  sol_azimuth_angle: Sol_Azimuth_Angle
-  sun_glint_angle: Sun_Glint_Angle
-  scan_angle: Scan_Angle
