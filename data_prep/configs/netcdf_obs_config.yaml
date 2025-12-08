@@ -1,0 +1,92 @@
+# Configuration for NetCDF observation data processing
+
+# Observation types and their associated satellite IDs
+observations:
+  atms:
+    sat_ids:
+      - n20
+      - n21
+      - npp
+    description: "Advanced Technology Microwave Sounder"
+  
+  # Add more observation types as needed
+  # Example:
+  # cris:
+  #   sat_ids:
+  #     - n20
+  #     - n21
+  #     - npp
+  #   description: "Cross-track Infrared Sounder"
+  
+  # amsua:
+  #   sat_ids:
+  #     - n15
+  #     - n18
+  #     - n19
+  #     - metop-a
+  #     - metop-b
+  #   description: "Advanced Microwave Sounding Unit-A"
+
+# Default cycles to process
+default_cycles:
+  - "00"
+  - "06"
+  - "12"
+  - "18"
+
+# File naming pattern
+# {obs_type} will be replaced with observation type (e.g., atms)
+# {sat_id} will be replaced with satellite ID (e.g., n21)
+# {date_cycle} will be replaced with YYYYMMDDHH
+file_pattern: "diag_{obs_type}_{sat_id}_ges.{date_cycle}.nc4"
+
+# Directory structure pattern
+# {date} will be replaced with YYYYMMDD
+# {cycle} will be replaced with HH (00, 06, 12, 18)
+dir_pattern: "gdas.{date}/{cycle}/atmos"
+
+# NetCDF variable definitions
+# Channel information variables (dimension: nchans)
+channel_vars:
+  - chaninfoidx
+  - frequency
+  - polarization
+  - wavenumber
+  - error_variance
+  - mean_lapse_rate
+  - use_flag
+  - sensor_chan
+  - satinfo_chan
+
+# Observation data variables (dimension: nobs)
+# These are read from NetCDF but not all are written to output
+obs_vars:
+  - Channel_Index
+  - Observation_Class
+  - Latitude
+  - Longitude
+  - Elevation
+  - Obs_Time
+  - Scan_Position
+  - Sat_Zenith_Angle
+  - Sat_Azimuth_Angle
+  - Sol_Zenith_Angle
+  - Sol_Azimuth_Angle
+  - Sun_Glint_Angle
+  - Scan_Angle
+  - Observation
+
+# Variables to include in output Parquet file
+# Format: output_column_name: NetCDF_Variable_Name
+output_variables:
+  latitude: Latitude
+  longitude: Longitude
+  elevation: Elevation
+  obs_time: Obs_Time
+  scan_position: Scan_Position
+  sat_zenith_angle: Sat_Zenith_Angle
+  sat_azimuth_angle: Sat_Azimuth_Angle
+  sol_zenith_angle: Sol_Zenith_Angle
+  sol_azimuth_angle: Sol_Azimuth_Angle
+  sun_glint_angle: Sun_Glint_Angle
+  scan_angle: Scan_Angle

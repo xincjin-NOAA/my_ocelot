@@ -69,23 +69,40 @@ around as you will replace the existing data. Please note that the output direct
 `configs/local_settings.py` file.
 
 
-Single file conversion:
+## NetCDF to Parquet Conversion
 
+### Configuration
+Edit `configs/netcdf_obs_config.yaml` to define observation types and satellite IDs.
+
+### Usage
+
+**Single file conversion:**
 ```bash
-python netcdf_reader.py diag_atms_n21_ges.2024011200.nc output.parquet
+python netcdf_reader.py single diag_atms_n21_ges.2024011200.nc4 output.parquet
 ```
-Single file with date partitioning:
 
+**Batch processing - all satellites for ATMS (from config):**
 ```bash
-python netcdf_reader.py diag_atms_n21_ges.2024011200.nc output_dir/ --partition
-```
-Batch processing multiple files:
-
-```bash
-python netcdf_reader.py \
-    "/path/to/diag_atms_n21_ges.{date}.nc" \
-    output_dir/ \
+python netcdf_reader.py batch /path/to/data output_dir/ \
     --start-date 2024-01-01 \
     --end-date 2024-01-31 \
-    --partition
+    --obs-type atms
+```
+
+**Batch processing - specific satellites only:**
+```bash
+python netcdf_reader.py batch /path/to/data output_dir/ \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-31 \
+    --obs-type atms \
+    --sat-ids n21 npp
+```
+
+**Batch processing - specific cycles only:**
+```bash
+python netcdf_reader.py batch /path/to/data output_dir/ \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-31 \
+    --obs-type atms \
+    --cycles 00 12
 ```

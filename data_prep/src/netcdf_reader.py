@@ -4,23 +4,53 @@ import argparse
 from datetime import datetime, timedelta
 import numpy as np
 import netCDF4 as nc
+import yaml
 
 sys.path.insert(0, os.path.realpath('/'))
 
 
-def read_netcdf_diag(file_path: str) -> dict:
+def load_config(config_path: str = None) -> dict:
+    """Load observation configuration from YAML file.
+    
+    Parameters
+    ----------
+    config_path : str, optional
+        Path to configuration file. If None, uses default location.
+        
+    Returns
+    -------
+    dict
+        Configuration dictionary
+    """
+    if config_path is None:
+        # Default config location
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(script_dir, '..', 'configs', 'netcdf_obs_config.yaml')
+    
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    return config
+
+
+def read_netcdf_diag(file_path: str, config: dict = None) -> dict:
     """Read NetCDF diagnostic file and return data as a dictionary.
     
     Parameters
     ----------
     file_path : str
         Path to the NetCDF file
+    config : dict, optional
+        Configuration dictionary. If None, loads default config.
         
     Returns
     -------
     dict
         Dictionary containing all variables from the NetCDF file
     """
+    if config is None:
+        config = load_config()
+    
     data = {}
     
     with nc.Dataset(file_path, 'r') as ncfile:
@@ -31,18 +61,9 @@ def read_netcdf_diag(file_path: str) -> dict:
         print(f"Reading NetCDF file: {file_path}")
         print(f"  nchans: {nchans}, nobs: {nobs}")
         
-        # Define channel information variables (dimension: nchans)
-        channel_vars = [
-            'chaninfoidx',
-            'frequency',
-            'polarization',
-            'wavenumber',
-            'error_variance',
-            'mean_lapse_rate',
-            'use_flag',
-            'sensor_chan',
-            'satinfo_chan',
-        ]
+        # Get variable lists from config
+        channel_vars = config.get('channel_vars', [])
+        obs_vars = config.get('obs_vars', [])
         
         # Read channel information
         for var_name in channel_vars:
@@ -50,24 +71,6 @@ def read_netcdf_diag(file_path: str) -> dict:
                 data[var_name] = ncfile.variables[var_name][:].data
             else:
                 print(f"Warning: Variable '{var_name}' not found in NetCDF file")
-        
-        # Define observation data variables (dimension: nobs)
-        obs_vars = [
-            'Channel_Index',
-            'Observation_Class',
-            'Latitude',
-            'Longitude',
-            'Elevation',
-            'Obs_Time',
-            'Scan_Position',
-            'Sat_Zenith_Angle',
-            'Sat_Azimuth_Angle',
-            'Sol_Zenith_Angle',
-            'Sol_Azimuth_Angle',
-            'Sun_Glint_Angle',
-            'Scan_Angle',
-            'Observation',
-        ]
         
         # Read observation data
         for var_name in obs_vars:
@@ -83,7 +86,7 @@ def read_netcdf_diag(file_path: str) -> dict:
     return data
 
 
-def netcdf_to_parquet(input_file: str, output_path: str, date: str = None) -> None:
+def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, sat_id: str = None, config: dict = None) -> None:
     """Convert NetCDF diagnostic file to Parquet format.
     
     Parameters
@@ -94,12 +97,20 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None) -> No
         Path to output Parquet file or directory
     date : str, optional
         Date string for partitioning (YYYY-MM-DD format)
+    sat_id : str, optional
+        Satellite ID (e.g., 'n21', 'n20', 'npp')
+    config : dict, optional
+        Configuration dictionary. If None, loads default config.
     """
     import pyarrow as pa
     import pyarrow.parquet as pq
     
+    # Load config if not provided
+    if config is None:
+        config = load_config()
+    
     # Read NetCDF data
-    data = read_netcdf_diag(input_file)
+    data = read_netcdf_diag(input_file, config)
     
     nchans = data['nchans']
     nobs = data['nobs']
@@ -120,25 +131,16 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None) -> No
     if date is not None:
         table_data['date'] = pa.array([date] * n_unique_obs)
     
-    # Define observation variables to extract (same for all channels)
-    # These will be sampled at every nchans-th value
-    obs_variables = [
-        ('latitude', 'Latitude'),
-        ('longitude', 'Longitude'),
-        ('elevation', 'Elevation'),
-        ('obs_time', 'Obs_Time'),
-        ('scan_position', 'Scan_Position'),
-        ('sat_zenith_angle', 'Sat_Zenith_Angle'),
-        ('sat_azimuth_angle', 'Sat_Azimuth_Angle'),
-        ('sol_zenith_angle', 'Sol_Zenith_Angle'),
-        ('sol_azimuth_angle', 'Sol_Azimuth_Angle'),
-        ('sun_glint_angle', 'Sun_Glint_Angle'),
-        ('scan_angle', 'Scan_Angle'),
-    ]
+    # Add sat_id column if provided
+    if sat_id is not None:
+        table_data['sat_id'] = pa.array([sat_id] * n_unique_obs)
+    
+    # Get output variables from config
+    output_variables = config.get('output_variables', {})
     
     # Add observation variables (same for all channels, so take every nchans-th value)
     # Assuming data is organized as: [obs1_ch1, obs1_ch2, ..., obs1_chN, obs2_ch1, obs2_ch2, ...]
-    for output_name, netcdf_name in obs_variables:
+    for output_name, netcdf_name in output_variables.items():
         var_data = data[netcdf_name][::nchans]
         
         # Handle character arrays (2D) - convert to strings
@@ -166,7 +168,7 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None) -> No
     
     # Write to parquet
     if date is not None:
-        # Write as partitioned dataset
+        # Write as partitioned dataset (append mode to combine multiple sat_ids)
         os.makedirs(output_path, exist_ok=True)
         pq.write_to_dataset(
             table,
@@ -177,17 +179,24 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None) -> No
         )
         print(f"Written partitioned parquet to: {output_path}")
     else:
-        # Write as single file
+        # Write as single file (append if exists to combine multiple sat_ids)
+        if os.path.exists(output_path):
+            # Read existing data and append
+            existing_table = pq.read_table(output_path)
+            table = pa.concat_tables([existing_table, table])
         pq.write_table(table, output_path)
         print(f"Written parquet file to: {output_path}")
 
 
 def process_netcdf_files(start_date: datetime,
                          end_date: datetime,
-                         data_type: str,
-                         input_pattern: str,
+                         obs_type: str,
+                         base_dir: str,
                          output_path: str,
-                         partition_by_date: bool = True) -> None:
+                         partition_by_date: bool = True,
+                         cycles: list = None,
+                         sat_ids: list = None,
+                         config_path: str = None) -> None:
     """Process multiple NetCDF files and convert to Parquet.
     
     Parameters
@@ -196,70 +205,157 @@ def process_netcdf_files(start_date: datetime,
         Start date for processing
     end_date : datetime
         End date for processing
-    data_type : str
-        Type of data (e.g., 'atms_n21')
-    input_pattern : str
-        Pattern for input files with {date} placeholder
-        Example: '/path/to/diag_atms_n21_ges.{date}.nc'
+    obs_type : str
+        Type of observation (e.g., 'atms', 'cris', 'amsua')
+    base_dir : str
+        Base directory containing gdas.YYYYMMDD subdirectories
+        Example: '/path/to/data'
+        Expected structure: base_dir/gdas.YYYYMMDD/HH/atmos/diag_{obs_type}_{sat_id}_ges.YYYYMMDDHH.nc4
     output_path : str
         Output directory for parquet files
     partition_by_date : bool
         Whether to partition output by date
+    cycles : list, optional
+        List of cycles to process (e.g., ['00', '06', '12', '18'])
+        If None, uses default from config
+    sat_ids : list, optional
+        List of satellite IDs to process (e.g., ['n20', 'n21', 'npp'])
+        If None, uses all satellite IDs from config for the given obs_type
+    config_path : str, optional
+        Path to configuration file
     """
+    # Load configuration
+    config = load_config(config_path)
+    
+    # Get cycles from config if not provided
+    if cycles is None:
+        cycles = config.get('default_cycles', ['00', '06', '12', '18'])
+    
+    # Get satellite IDs from config if not provided
+    if sat_ids is None:
+        if obs_type in config['observations']:
+            sat_ids = config['observations'][obs_type]['sat_ids']
+        else:
+            raise ValueError(f"Observation type '{obs_type}' not found in config. "
+                           f"Available types: {list(config['observations'].keys())}")
+    
+    print(f"Processing observation type: {obs_type}")
+    print(f"Satellite IDs: {sat_ids}")
+    print(f"Cycles: {cycles}")
+    print(f"Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    print("=" * 80)
+    
     day = timedelta(days=1)
     date = start_date
     
     while date <= end_date:
-        date_str = date.strftime("%Y%m%d%H")
+        date_str = date.strftime("%Y%m%d")
         date_partition = date.strftime("%Y-%m-%d")
         
-        # Format input file path
-        input_file = input_pattern.format(date=date_str)
-        
-        if not os.path.exists(input_file):
-            print(f"File not found: {input_file}, skipping...")
-            date += day
-            continue
-        
-        # Process file
-        try:
-            netcdf_to_parquet(
-                input_file,
-                output_path,
-                date=date_partition if partition_by_date else None
-            )
-        except Exception as e:
-            print(f"Error processing {input_file}: {e}")
+        # Process each cycle for this date
+        for cycle in cycles:
+            # Process each satellite ID
+            for sat_id in sat_ids:
+                # Construct file path: base_dir/gdas.YYYYMMDD/HH/atmos/diag_{obs_type}_{sat_id}_ges.YYYYMMDDHH.nc4
+                date_cycle_str = f"{date_str}{cycle}"
+                input_file = os.path.join(
+                    base_dir,
+                    f"gdas.{date_str}",
+                    cycle,
+                    "atmos",
+                    f"diag_{obs_type}_{sat_id}_ges.{date_cycle_str}.nc4"
+                )
+                
+                if not os.path.exists(input_file):
+                    print(f"File not found: {input_file}, skipping...")
+                    continue
+                
+                # Process file
+                try:
+                    print(f"Processing: {input_file}")
+                    netcdf_to_parquet(
+                        input_file,
+                        output_path,
+                        date=date_partition if partition_by_date else None,
+                        sat_id=sat_id,
+                        config=config
+                    )
+                except Exception as e:
+                    print(f"Error processing {input_file}: {e}")
+                    import traceback
+                    traceback.print_exc()
         
         date += day
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Convert NetCDF diagnostic files to Parquet format')
-    parser.add_argument('input_file', help='Input NetCDF file path or pattern with {date} placeholder')
-    parser.add_argument('output_path', help='Output Parquet file or directory path')
-    parser.add_argument('--start-date', help='Start date (YYYY-MM-DD) for batch processing')
-    parser.add_argument('--end-date', help='End date (YYYY-MM-DD) for batch processing')
-    parser.add_argument('--data-type', default='atms', help='Data type identifier')
-    parser.add_argument('--partition', action='store_true', help='Partition output by date')
-    parser.add_argument('--no-partition', dest='partition', action='store_false', help='Do not partition output')
-    parser.set_defaults(partition=True)
+    parser = argparse.ArgumentParser(
+        description='Convert NetCDF diagnostic files to Parquet format',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Single file
+  python netcdf_reader.py single input.nc4 output.parquet
+  
+  # Batch processing - all satellites for ATMS (from config)
+  python netcdf_reader.py batch /path/to/data output_dir/ \\
+      --start-date 2024-01-01 --end-date 2024-01-31 \\
+      --obs-type atms
+  
+  # Batch processing - specific satellites only
+  python netcdf_reader.py batch /path/to/data output_dir/ \\
+      --start-date 2024-01-01 --end-date 2024-01-31 \\
+      --obs-type atms --sat-ids n21 npp
+  
+  # Batch processing - specific cycles only
+  python netcdf_reader.py batch /path/to/data output_dir/ \\
+      --start-date 2024-01-01 --end-date 2024-01-31 \\
+      --obs-type atms --cycles 00 12
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='mode', help='Processing mode')
+    
+    # Single file mode
+    single_parser = subparsers.add_parser('single', help='Process a single NetCDF file')
+    single_parser.add_argument('input_file', help='Input NetCDF file path')
+    single_parser.add_argument('output_path', help='Output Parquet file or directory path')
+    single_parser.add_argument('--partition', action='store_true', help='Partition output by date')
+    single_parser.add_argument('--no-partition', dest='partition', action='store_false', help='Do not partition output')
+    single_parser.set_defaults(partition=True)
+    
+    # Batch processing mode
+    batch_parser = subparsers.add_parser('batch', help='Process multiple NetCDF files')
+    batch_parser.add_argument('base_dir', help='Base directory containing gdas.YYYYMMDD subdirectories')
+    batch_parser.add_argument('output_path', help='Output Parquet directory path')
+    batch_parser.add_argument('--start-date', required=True, help='Start date (YYYY-MM-DD)')
+    batch_parser.add_argument('--end-date', required=True, help='End date (YYYY-MM-DD)')
+    batch_parser.add_argument('--obs-type', required=True, help='Observation type (e.g., atms, cris, amsua)')
+    batch_parser.add_argument('--sat-ids', nargs='+', help='Satellite IDs to process (e.g., n20 n21 npp). If not specified, uses all from config.')
+    batch_parser.add_argument('--cycles', nargs='+', help='Cycles to process (e.g., 00 06 12 18). If not specified, uses default from config.')
+    batch_parser.add_argument('--config', help='Path to configuration YAML file')
+    batch_parser.add_argument('--partition', action='store_true', help='Partition output by date')
+    batch_parser.add_argument('--no-partition', dest='partition', action='store_false', help='Do not partition output')
+    batch_parser.set_defaults(partition=True)
     
     args = parser.parse_args()
     
-    if args.start_date and args.end_date:
+    if args.mode == 'batch':
         # Batch processing mode
         start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
         end_date = datetime.strptime(args.end_date, "%Y-%m-%d")
         process_netcdf_files(
             start_date,
             end_date,
-            args.data_type,
-            args.input_file,
+            args.obs_type,
+            args.base_dir,
             args.output_path,
-            partition_by_date=args.partition
+            partition_by_date=args.partition,
+            cycles=args.cycles,
+            sat_ids=args.sat_ids,
+            config_path=args.config
         )
-    else:
+    elif args.mode == 'single':
         # Single file mode
         date_str = None
         if args.partition:
@@ -271,3 +367,5 @@ if __name__ == "__main__":
                 date_str = date_obj.strftime("%Y-%m-%d")
         
         netcdf_to_parquet(args.input_file, args.output_path, date=date_str)
+    else:
+        parser.print_help()
