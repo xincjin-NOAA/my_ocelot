@@ -282,3 +282,5 @@ if __name__ == "__main__":
             call_generator(gen_type)
     else:
         call_generator(args.type)
+
+    print('Done!')
