@@ -109,23 +109,29 @@ class Encoder(bufr.encoders.EncoderBase):
         timestamps = container.get("variables/timestamp", category)
         num_rows = len(timestamps)
 
+        # Track field names to avoid duplicates
+        field_names = set()
+
         # Add date column first (for top-level partitioning)
         if date is not None:
             data_dict["date"] = pa.array([date] * num_rows)
             fields.append(pa.field("date", pa.string()))
+            field_names.add("date")
         
         # Add cycle column second (for sub-partitioning under date)
         if cycle is not None:
             data_dict["cycle"] = pa.array([cycle] * num_rows)
             fields.append(pa.field("cycle", pa.string()))
+            field_names.add("cycle")
 
         # Primary time dimension
         timestamps = container.get("variables/timestamp", category)
         data_dict["time"] = pa.array(timestamps)
         fields.append(pa.field("time", data_dict["time"].type))
+        field_names.add("time")
 
         dim_label_map = {d.name().lower(): d.labels for d in dims.dims()}
-
+        
         for var in self.description.get_variables():
             dim_names = [n.lower() for n in dims.dim_names_for_var(var["name"])]
             if not dim_names:
@@ -147,16 +153,20 @@ class Encoder(bufr.encoders.EncoderBase):
             meta = self._field_metadata(var)
 
             if len(var_data.shape) == 1:
-                array = pa.array(var_data)
-                data_dict[var_name] = array
-                fields.append(pa.field(var_name, array.type, metadata=meta))
+                if var_name not in field_names:
+                    array = pa.array(var_data)
+                    data_dict[var_name] = array
+                    fields.append(pa.field(var_name, array.type, metadata=meta))
+                    field_names.add(var_name)
             elif len(var_data.shape) == 2:
                 labels = dim_label_map[dim_names[1]]
                 for i in range(var_data.shape[1]):
                     col_name = f"{var_name}_{dim_names[1]}_{labels[i]}"
-                    array = pa.array(var_data[:, i])
-                    data_dict[col_name] = array
-                    fields.append(pa.field(col_name, array.type, metadata=meta))
+                    if col_name not in field_names:
+                        array = pa.array(var_data[:, i])
+                        data_dict[col_name] = array
+                        fields.append(pa.field(col_name, array.type, metadata=meta))
+                        field_names.add(col_name)
             else:
                 raise ValueError(
                     f"Variable {var_name} has an invalid shape {var_data.shape}"
