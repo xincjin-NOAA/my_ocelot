@@ -19,7 +19,23 @@ def create_data(start_date: datetime,
                 output_type: str,
                 suffix: str = None,
                 append: bool = True) -> None:
-    """Create zarr files from BUFR data in week long chunks."""
+    """
+    Create data files from BUFR data for each day in the specified date range.
+
+    Parameters
+    ----------
+    start_date : datetime
+        Start date (inclusive).
+    end_date : datetime
+        End date (inclusive).
+    data_type : str
+        Data type to process (must be defined in config).
+    output_type : str
+        Output file type ('zarr' or 'parquet').
+    suffix : str, optional
+        Suffix to append to the output file name.
+    append : bool, optional
+    """
 
     bufr.mpi.App(sys.argv)
     comm = bufr.mpi.Comm("world")
@@ -46,8 +62,9 @@ def create_data(start_date: datetime,
     day = timedelta(days=1)
 
     while date <= end_date:
-        _create_data_for_day(comm, date, data_type, output_type, output_path)
+        _append_data_for_day(comm, date, data_type, output_type, output_path)
         date += day
+
 
 def create_weekly_data(start_date: datetime,
                        end_date: datetime,
@@ -55,7 +72,24 @@ def create_weekly_data(start_date: datetime,
                        output_type: str = 'parquet',
                        suffix: str = None,
                        append: bool = True) -> None:
-    """Create zarr files from BUFR data in week long chunks."""
+
+    """
+    Create data files from BUFR data for each week in the specified date range.
+
+    Parameters
+    ----------
+    start_date : datetime
+        Start date (inclusive).
+    end_date : datetime
+        End date (inclusive).
+    data_type : str
+        Data type to process (must be defined in config).
+    output_type : str
+        Output file type ('zarr' or 'parquet').
+    suffix : str, optional
+        Suffix to append to the output file name.
+    append : bool, optional
+    """
 
     bufr.mpi.App(sys.argv)
     comm = bufr.mpi.Comm("world")
@@ -87,6 +121,7 @@ def create_weekly_data(start_date: datetime,
                     import shutil
                     shutil.rmtree(path)
                 os.makedirs(path, exist_ok=True)
+
         comm.barrier()
 
     # Process each day and append to the appropriate weekly file
@@ -97,13 +132,14 @@ def create_weekly_data(start_date: datetime,
         week_end = week_start + timedelta(days=6)
         out_path = output_paths[(week_start, week_end)]
 
-        _create_data_for_day(comm, date, data_type, output_type, out_path)
+        _append_data_for_day(comm, date, data_type, output_type, out_path)
         date += day
+
 
 def create_monthly_data(start_date: datetime,
                         end_date: datetime,
                         data_type: str,
-                        output_type: str = 'parquet',
+                        output_type: str = 'zarr',
                         suffix: str = None,
                         append: bool = True) -> None:
     """Create zarr files from BUFR data in month long chunks."""
@@ -126,9 +162,9 @@ def create_monthly_data(start_date: datetime,
     output_paths = {}
     for mstart, mend in month_ranges:
         if suffix:
-            file_name = f"{data_type}_{suffix}_{mstart:%Y%m}_{mend:%Y%m}.{extension}"
+            file_name = f"{data_type}_{suffix}_{mstart:%Y%m}.{extension}"
         else:
-            file_name = f"{data_type}_{mstart:%Y%m}_{mend:%Y%m}.{extension}"
+            file_name = f"{data_type}_{mstart:%Y%m}.{extension}"
         output_paths[(mstart, mend)] = os.path.join(settings.OUTPUT_PATH, file_name)
 
     if output_type == 'zarr':
@@ -150,17 +186,20 @@ def create_monthly_data(start_date: datetime,
         month_end = next_month - timedelta(days=1)
         out_path = output_paths[(month_start, month_end)]
 
-        _create_data_for_day(comm, date, data_type, output_type, out_path)
+        _append_data_for_day(comm, date, data_type, output_type, out_path)
         date += day
+
 
 def create_yearly_data(start_date: datetime,
                        end_date: datetime,
                        data_type: str,
-                       output_type: str = 'parquet',
+                       output_type: str = 'zarr',
                        suffix: str = None,
                        append: bool = True) -> None:
-    """Create zarr files from BUFR data in year long chunks."""
-    
+    """
+    Create zarr files from BUFR data in year long chunks.
+    """
+
     bufr.mpi.App(sys.argv)
     comm = bufr.mpi.Comm("world")
 
@@ -192,7 +231,7 @@ def create_yearly_data(start_date: datetime,
                     shutil.rmtree(path)
                 os.makedirs(path, exist_ok=True)
         comm.barrier()
-    
+
     # Process each day and append to the appropriate yearly file
     day = timedelta(days=1)
     date = start_date
@@ -201,16 +240,16 @@ def create_yearly_data(start_date: datetime,
         year_end = date.replace(month=12, day=31)
         out_path = output_paths[(year_start, year_end)]
 
-        _create_data_for_day(comm, date, data_type, output_type, out_path)
+        _append_data_for_day(comm, date, data_type, output_type, out_path)
         date += day
 
 
-def _create_data_for_day(comm,
-                        date: datetime,
-                        data_type: str,
-                        output_type: str,
-                        output_path: str,
-                        append: bool = True) -> None:
+def _append_data_for_day(comm,
+                         date: datetime,
+                         data_type: str,
+                         output_type: str,
+                         output_path: str) -> None:
+
     start_datetime = date
     end_datetime = date + timedelta(hours=23, minutes=59, seconds=59)
 
@@ -221,28 +260,13 @@ def _create_data_for_day(comm,
     seperate = output_type == 'cycle_parquet'
     description, container = runner.run(comm, data_type, parameters, seperate=seperate)
 
-    if container is None:
-        raise ValueError("No data found")
+    if comm.rank() == 0:
+        if container is None or container.size() == 0:
+            return  # No data for this day
 
-    # Filter data based on the specified latitude and longitude ranges
-    # if the settings have been defined
-    if hasattr(settings, 'LAT_RANGE') and hasattr(settings, 'LON_RANGE'):
-        if isinstance(container, dict):
-            # Handle dict of containers (cycle_parquet case)
-            for cycle_key, cycle_container in container.items():
-                latitudes = cycle_container.get('latitude')
-                longitudes = cycle_container.get('longitude')
-
-                mask = np.array([True] * len(latitudes))
-                mask[latitudes < settings.LAT_RANGE[0]] = False
-                mask[latitudes > settings.LAT_RANGE[1]] = False
-                mask[longitudes < settings.LON_RANGE[0]] = False
-                mask[longitudes > settings.LON_RANGE[1]] = False
-
-                if np.any(mask):
-                    cycle_container.apply_mask(mask)
-        else:
-            # Handle single container
+        # Filter data based on the specified latitude and longitude ranges
+        # if the settings have been defined
+        if hasattr(settings, 'LAT_RANGE') and hasattr(settings, 'LON_RANGE'):
             latitudes = container.get('latitude')
             longitudes = container.get('longitude')
 
@@ -257,12 +281,8 @@ def _create_data_for_day(comm,
 
             container.apply_mask(mask)
 
-    if comm.rank() == 0:
-        # Format date string for partitioning (YYYY-MM-DD)
-        date_str = date.strftime("%Y-%m-%d")
-        
         if output_type == 'zarr':
-            ZarrEncoder(description).encode(container, f'{output_path}', append=append)
+            ZarrEncoder(description).encode(container, f'{output_path}', append=True)
         elif output_type == 'parquet':
             ParquetEncoder(description).encode(container, f'{output_path}', append=append)
         elif output_type == 'cycle_parquet':

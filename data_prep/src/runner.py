@@ -84,12 +84,14 @@ class TankRunner(Runner):
                             combined_container[cycle_key] = bufr.DataContainer()
 
                     container = self._make_obs(comm, input_path)
-
                     container.gather(comm)
-                    if seperate:
-                        combined_container[cycle_key].append(container)
-                    else:
-                        combined_container.append(container)
+
+                    if comm.rank() == 0:
+                        if seperate:
+                            combined_container[cycle_key].append(container)
+                        else:
+                            combined_container.append(container)
+
         elif isinstance(self.type_config.paths, dict):
             for day_str in self._day_strs(parameters.start_time, parameters.stop_time):
                 for path_idx in range(len(list(self.type_config.paths.values())[0])):
@@ -110,10 +112,12 @@ class TankRunner(Runner):
                             combined_container[cycle_key] = bufr.DataContainer()
                     container = self._make_obs(comm, input_dict)
                     container.gather(comm)
-                    if seperate:
-                        combined_container[cycle_key].append(container)
-                    else:
-                        combined_container.append(container)
+
+                    if comm.rank() == 0:
+                        if seperate:
+                            combined_container[cycle_key].append(container)
+                        else:
+                            combined_container.append(container)
 
         return combined_container
 
@@ -157,15 +161,16 @@ class PcaRunner(Runner):
             input_path = os.path.join(directory, fname)
             container = self._make_obs(comm, input_path)
             container.gather(comm)
-            
-            if seperate:
-                # Extract cycle from filename (use hour as cycle key)
-                cycle_key = start_str[8:10]  # Extract hour (HH) from YYYYMMDDHHMMSS
-                if cycle_key not in combined_container:
-                    combined_container[cycle_key] = bufr.DataContainer()
-                combined_container[cycle_key].append(container)
-            else:
-                combined_container.append(container)
+
+            if comm.rank() == 0:
+                if seperate:
+                    # Extract cycle from filename (use hour as cycle key)
+                    cycle_key = start_str[8:10]  # Extract hour (HH) from YYYYMMDDHHMMSS
+                    if cycle_key not in combined_container:
+                        combined_container[cycle_key] = bufr.DataContainer()
+                    combined_container[cycle_key].append(container)
+                else:
+                    combined_container.append(container)
 
         return combined_container
 
