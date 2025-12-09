@@ -261,8 +261,12 @@ def _append_data_for_day(comm,
     description, container = runner.run(comm, data_type, parameters, seperate=seperate)
 
     if comm.rank() == 0:
-        if container is None or container.size() == 0:
-            return  # No data for this day
+        if seperate:
+            if container is None or len(container) == 0:
+                return  # No data for this day
+        else:
+            if container is None or container.size() == 0:
+                return  # No data for this day
 
         # Filter data based on the specified latitude and longitude ranges
         # if the settings have been defined
@@ -281,12 +285,15 @@ def _append_data_for_day(comm,
 
             container.apply_mask(mask)
 
+        # Format date string for partitioning (YYYY-MM-DD)
+        date_str = date.strftime("%Y-%m-%d")
+        
         if output_type == 'zarr':
             ZarrEncoder(description).encode(container, f'{output_path}', append=True)
         elif output_type == 'parquet':
-            ParquetEncoder(description).encode(container, f'{output_path}', append=append)
+            ParquetEncoder(description).encode(container, f'{output_path}', append=True)
         elif output_type == 'cycle_parquet':
-            CycleParquetEncoder(description).encode(container, f'{output_path}', append=append, date=date_str)
+            CycleParquetEncoder(description).encode(container, f'{output_path}', append=True, date=date_str)
         else:
             raise ValueError(f"Unsupported output type: {output_type}")
 
