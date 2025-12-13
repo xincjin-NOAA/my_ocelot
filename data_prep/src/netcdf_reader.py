@@ -89,15 +89,13 @@ def read_netcdf_diag(file_path: str, obs_type: str, config: dict = None) -> dict
     return data
 
 
-def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle: str = None, sat_id: str = None, config: dict = None) -> None:
-    """Convert NetCDF diagnostic file to Parquet format.
+def netcdf_to_table(input_file: str, date: str = None, cycle: str = None, sat_id: str = None, config: dict = None):
+    """Convert NetCDF diagnostic file to PyArrow Table.
     
     Parameters
     ----------
     input_file : str
         Path to input NetCDF file
-    output_path : str
-        Path to output Parquet file or directory
     date : str, optional
         Date string for partitioning (YYYY-MM-DD format)
     cycle : str, optional
@@ -106,6 +104,11 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle
         Satellite ID (e.g., 'n21', 'n20', 'npp')
     config : dict, optional
         Configuration dictionary. If None, loads default config.
+        
+    Returns
+    -------
+    pa.Table
+        PyArrow table containing the data
     """
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -183,11 +186,45 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle
     
     # Create table
     table = pa.Table.from_pydict(table_data)
+    return table
+
+
+def write_tables_to_parquet(tables: list, output_path: str, date: str = None, cycle: str = None) -> None:
+    """Write multiple PyArrow tables to Parquet format.
+    
+    Parameters
+    ----------
+    tables : list
+        List of PyArrow tables to write
+    output_path : str
+        Path to output Parquet file or directory
+    date : str, optional
+        Date string for partitioning (YYYY-MM-DD format)
+    cycle : str, optional
+        Cycle string for partitioning (e.g., '00', '06', '12', '18')
+    """
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    
+    if not tables:
+        print("No tables to write")
+        return
+    
+    # Concatenate all tables
+    print(f"Concatenating {len(tables)} tables...")
+    try:
+        combined_table = pa.concat_tables(tables, promote_options='permissive')
+    except Exception as e:
+        print(f"Warning: Schema mismatch when concatenating. Using pandas fallback.")
+        print(f"Error: {e}")
+        import pandas as pd
+        dfs = [table.to_pandas() for table in tables]
+        combined_df = pd.concat(dfs, ignore_index=True)
+        combined_table = pa.Table.from_pandas(combined_df)
     
     # Write to parquet
     if date is not None:
         # Write as partitioned dataset by date and cycle
-        # All satellites for the same date/cycle go into the same partition
         os.makedirs(output_path, exist_ok=True)
         
         # Determine partition columns
@@ -203,28 +240,29 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle
         
         if os.path.exists(partition_dir):
             # Read existing data and append
+            print(f"Found existing partition at {partition_dir}, appending...")
             existing_table = pq.read_table(partition_dir)
             
             # Ensure schemas are compatible by promoting to a unified schema
             try:
-                table = pa.concat_tables([existing_table, table], promote_options='permissive')
+                combined_table = pa.concat_tables([existing_table, combined_table], promote_options='permissive')
             except Exception as e:
                 print(f"Warning: Schema mismatch when appending. Existing schema: {existing_table.schema}")
-                print(f"New schema: {table.schema}")
+                print(f"New schema: {combined_table.schema}")
                 print(f"Error: {e}")
                 # Try to unify schemas by converting to pandas and back
                 import pandas as pd
                 df_existing = existing_table.to_pandas()
-                df_new = table.to_pandas()
+                df_new = combined_table.to_pandas()
                 df_combined = pd.concat([df_existing, df_new], ignore_index=True)
-                table = pa.Table.from_pandas(df_combined)
+                combined_table = pa.Table.from_pandas(df_combined)
             
             # Remove old partition files before writing
             import shutil
             shutil.rmtree(partition_dir)
         
         pq.write_to_dataset(
-            table,
+            combined_table,
             root_path=output_path,
             partition_cols=partition_cols,
             existing_data_behavior='overwrite_or_ignore',
@@ -232,26 +270,27 @@ def netcdf_to_parquet(input_file: str, output_path: str, date: str = None, cycle
         )
         
         partition_path = "/".join([f"{col}={date if col == 'date' else cycle}" for col in partition_cols])
-        print(f"Written partitioned parquet to: {output_path}/{partition_path}")
+        print(f"Written {len(combined_table)} rows to partitioned parquet: {output_path}/{partition_path}")
     else:
-        # Write as single file (append if exists to combine multiple sat_ids)
+        # Write as single file
         if os.path.exists(output_path):
             # Read existing data and append
+            print(f"Found existing file at {output_path}, appending...")
             existing_table = pq.read_table(output_path)
             
             # Ensure schemas are compatible
             try:
-                table = pa.concat_tables([existing_table, table], promote_options='permissive')
+                combined_table = pa.concat_tables([existing_table, combined_table], promote_options='permissive')
             except Exception as e:
                 print(f"Warning: Schema mismatch when appending. Using pandas fallback.")
                 import pandas as pd
                 df_existing = existing_table.to_pandas()
-                df_new = table.to_pandas()
+                df_new = combined_table.to_pandas()
                 df_combined = pd.concat([df_existing, df_new], ignore_index=True)
-                table = pa.Table.from_pandas(df_combined)
+                combined_table = pa.Table.from_pandas(df_combined)
         
-        pq.write_table(table, output_path)
-        print(f"Written parquet file to: {output_path}")
+        pq.write_table(combined_table, output_path)
+        print(f"Written {len(combined_table)} rows to parquet file: {output_path}")
 
 
 def process_netcdf_files(start_date: datetime,
@@ -320,6 +359,9 @@ def process_netcdf_files(start_date: datetime,
         
         # Process each cycle for this date
         for cycle in cycles:
+            # Collect all tables for this date/cycle combination
+            tables_for_cycle = []
+            
             # Process each satellite ID
             for sat_id in sat_ids:
                 # Construct file path: base_dir/gdas.YYYYMMDD/HH/atmos/diag_{obs_type}_{sat_id}_ges.YYYYMMDDHH.nc4
@@ -336,19 +378,36 @@ def process_netcdf_files(start_date: datetime,
                     print(f"File not found: {input_file}, skipping...")
                     continue
                 
-                # Process file
+                # Process file to table
                 try:
                     print(f"Processing: {input_file}")
-                    netcdf_to_parquet(
+                    table = netcdf_to_table(
                         input_file,
-                        output_path,
                         date=date_partition if partition_by_date else None,
                         cycle=cycle if partition_by_date else None,
                         sat_id=sat_id,
                         config=config
                     )
+                    tables_for_cycle.append(table)
+                    print(f"  -> Created table with {len(table)} rows for {sat_id}")
                 except Exception as e:
                     print(f"Error processing {input_file}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            # Write all tables for this cycle at once
+            if tables_for_cycle:
+                try:
+                    print(f"\nWriting {len(tables_for_cycle)} tables for {date_partition} cycle {cycle}...")
+                    write_tables_to_parquet(
+                        tables_for_cycle,
+                        output_path,
+                        date=date_partition if partition_by_date else None,
+                        cycle=cycle if partition_by_date else None
+                    )
+                    print()
+                except Exception as e:
+                    print(f"Error writing tables for {date_partition} cycle {cycle}: {e}")
                     import traceback
                     traceback.print_exc()
         
