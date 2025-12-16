@@ -49,6 +49,7 @@ bufr:
 
     height:
       query: "[*/SELV, */HSMSL, */HSAWS, */HSAWS[1]]"  # Height above ground level
+      type: int
 
   encoder:
     variables:
