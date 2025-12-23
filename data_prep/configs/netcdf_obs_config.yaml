@@ -103,7 +103,45 @@ observations:
     
     # Variables to include in output Parquet file
     output_variables: *default_output_vars
-  
+
+  surface_obs_uv:
+    description: "Surface observations (conventional)"
+    row_filter:
+      var: Observation_Type
+      values: [280, 281, 282, 284, 287]
+    obs_vars: 
+      - Station_ID
+      - Observation_Type
+      - Observation_Subtype
+      - Latitude
+      - Longitude
+      - Station_Elevation
+      - Pressure
+      - Height
+      - Time
+      - u_Observation
+      - u_Obs_Minus_Forecast_adjusted
+      - u_Obs_Minus_Forecast_unadjusted
+      - v_Observation
+      - v_Obs_Minus_Forecast_adjusted
+      - v_Obs_Minus_Forecast_unadjusted
+    output_variables:
+      - Station_ID
+      - Observation_Type
+      - Observation_Subtype
+      - Latitude
+      - Longitude
+      - Station_Elevation
+      - Pressure
+      - Height
+      - Time
+      - u_Observation
+      - u_Obs_Minus_Forecast_adjusted
+      - u_Obs_Minus_Forecast_unadjusted
+      - v_Observation
+      - v_Obs_Minus_Forecast_adjusted
+      - v_Obs_Minus_Forecast_unadjusted
+    input_src: conv_uv
   ssmis:
     sat_ids:
       - f17

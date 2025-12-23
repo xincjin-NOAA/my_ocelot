@@ -33,6 +33,23 @@ def load_config(config_path: str = None) -> dict:
     return config
 
 
+def _maybe_decode_char_array(arr):
+    if isinstance(arr, np.ma.MaskedArray):
+        fill_value = b'' if arr.dtype.kind == 'S' else ''
+        arr = arr.filled(fill_value)
+
+    if not isinstance(arr, np.ndarray):
+        return arr
+
+    if arr.ndim == 2 and arr.dtype.kind in {'S', 'U'} and arr.dtype.itemsize == 1:
+        out = nc.chartostring(arr)
+        if isinstance(out, np.ndarray):
+            return np.array([s.decode('utf-8', errors='replace').strip() if isinstance(s, (bytes, bytearray)) else str(s).strip() for s in out])
+        return out
+
+    return arr
+
+
 def read_netcdf_diag(file_path: str, obs_type: str, config: dict = None) -> dict:
     """Read NetCDF diagnostic file and return data as a dictionary.
     
@@ -57,39 +74,76 @@ def read_netcdf_diag(file_path: str, obs_type: str, config: dict = None) -> dict
     
     with nc.Dataset(file_path, 'r') as ncfile:
         # Read dimensions
-        nchans = len(ncfile.dimensions['nchans'])
-        nobs = len(ncfile.dimensions['nobs'])
+        nchans = len(ncfile.dimensions['nchans']) if 'nchans' in ncfile.dimensions else None
+
+        obs_dim_name = None
+        for candidate in ['nobs', 'nlocs', 'nrecs', 'nprofiles']:
+            if candidate in ncfile.dimensions:
+                obs_dim_name = candidate
+                break
+
+        if obs_dim_name is None:
+            raise ValueError(f"Could not determine observation dimension in NetCDF file: {file_path}")
+
+        nobs = len(ncfile.dimensions[obs_dim_name])
         
         print(f"Reading NetCDF file: {file_path}")
-        print(f"  nchans: {nchans}, nobs: {nobs}")
+        if nchans is not None:
+            print(f"  nchans: {nchans}, {obs_dim_name}: {nobs}")
+        else:
+            print(f"  {obs_dim_name}: {nobs}")
         
         # Get variable lists from observation-specific config
         obs_config = config.get('observations', {}).get(obs_type, {})
         channel_vars = obs_config.get('channel_vars', [])
         obs_vars = obs_config.get('obs_vars', [])
+
+        if not channel_vars and not obs_vars:
+            obs_vars = list(ncfile.variables.keys())
         
         # Read channel information
-        for var_name in channel_vars:
-            if var_name in ncfile.variables:
-                data[var_name] = ncfile.variables[var_name][:].data
-            else:
-                print(f"Warning: Variable '{var_name}' not found in NetCDF file")
+        if nchans is not None:
+            for var_name in channel_vars:
+                if var_name in ncfile.variables:
+                    data[var_name] = _maybe_decode_char_array(ncfile.variables[var_name][:])
+                else:
+                    print(f"Warning: Variable '{var_name}' not found in NetCDF file")
         
         # Read observation data
         for var_name in obs_vars:
             if var_name in ncfile.variables:
-                data[var_name] = ncfile.variables[var_name][:].data
+                data[var_name] = _maybe_decode_char_array(ncfile.variables[var_name][:])
             else:
                 print(f"Warning: Variable '{var_name}' not found in NetCDF file")
+
+        row_filter = obs_config.get('row_filter') or obs_config.get('filter_by_observation_type')
+        if row_filter:
+            filter_var = row_filter.get('var')
+            filter_values = row_filter.get('values')
+            if filter_var and filter_values and filter_var in data:
+                filter_arr = data[filter_var]
+
+                if nchans is not None and nobs % nchans == 0 and getattr(filter_arr, 'shape', None) and filter_arr.shape[0] == (nobs // nchans):
+                    mask_unique = np.isin(filter_arr, filter_values)
+                    mask = np.repeat(mask_unique, nchans)
+                else:
+                    mask = np.isin(filter_arr, filter_values)
+
+                if getattr(mask, 'shape', None) and mask.shape[0] == nobs:
+                    for k, v in list(data.items()):
+                        if isinstance(v, np.ndarray) and v.ndim >= 1 and v.shape[0] == nobs:
+                            data[k] = v[mask]
+                    nobs = int(mask.sum())
         
         # Store dimensions
         data['nchans'] = nchans
         data['nobs'] = nobs
+        data['obs_dim_name'] = obs_dim_name
         
     return data
 
 
-def netcdf_to_table(input_file: str, date: str = None, cycle: str = None, sat_id: str = None, config: dict = None):
+def netcdf_to_table(input_file: str, date: str = None, cycle: str = None, sat_id: str = None, config: dict = None, obs_type: str = None):
     """Convert NetCDF diagnostic file to PyArrow Table.
     
     Parameters
@@ -117,27 +171,29 @@ def netcdf_to_table(input_file: str, date: str = None, cycle: str = None, sat_id
     if config is None:
         config = load_config()
     
-    # Extract obs_type from input_file path (e.g., diag_atms_n21_ges.2024010100.nc4, diag_cris-fsr_n21_ges.2024010100.nc4)
-    import re
-    match = re.search(r'diag_([a-z\-]+)_', os.path.basename(input_file))
-    if match:
-        obs_type = match.group(1)
-    else:
-        raise ValueError(f"Could not extract observation type from filename: {input_file}")
+    # Extract obs_type from input_file path unless explicitly provided
+    if obs_type is None:
+        import re
+        match = re.search(r'diag_([a-z\-]+)_', os.path.basename(input_file))
+        if match:
+            obs_type = match.group(1)
+        else:
+            raise ValueError(f"Could not extract observation type from filename: {input_file}")
     
     # Read NetCDF data
     data = read_netcdf_diag(input_file, obs_type, config)
     
     nchans = data['nchans']
     nobs = data['nobs']
+
+    has_channels = nchans is not None and nchans > 0 and nobs % nchans == 0 and 'Observation' in data
+    if has_channels:
+        n_unique_obs = nobs // nchans
+    else:
+        n_unique_obs = nobs
     
-    # Calculate number of unique observations (nobs should be divisible by nchans)
-    if nobs % nchans != 0:
-        raise ValueError(f"nobs ({nobs}) is not divisible by nchans ({nchans})")
-    
-    n_unique_obs = nobs // nchans
-    
-    print(f"Reshaping data: {nobs} total obs -> {n_unique_obs} unique obs x {nchans} channels")
+    if has_channels:
+        print(f"Reshaping data: {nobs} total obs -> {n_unique_obs} unique obs x {nchans} channels")
     
     # Create PyArrow table from observation data
     # Each row represents one unique observation with all channels
@@ -157,15 +213,32 @@ def netcdf_to_table(input_file: str, date: str = None, cycle: str = None, sat_id
     
     # Get output variables from observation-specific config
     obs_config = config.get('observations', {}).get(obs_type, {})
-    output_variables = obs_config.get('output_variables', {})
+    output_variables_cfg = obs_config.get('output_variables', {})
+    if isinstance(output_variables_cfg, list):
+        output_variables = {v: v for v in output_variables_cfg}
+    else:
+        output_variables = output_variables_cfg or {}
+
+    if not output_variables:
+        for var_name, var_data in data.items():
+            if var_name in {'nchans', 'nobs', 'obs_dim_name'}:
+                continue
+            if isinstance(var_data, np.ndarray) and var_data.ndim >= 1 and var_data.shape[0] == n_unique_obs:
+                output_variables[var_name] = var_name
     
     # Add observation variables (same for all channels, so take every nchans-th value)
     # Assuming data is organized as: [obs1_ch1, obs1_ch2, ..., obs1_chN, obs2_ch1, obs2_ch2, ...]
     for output_name, netcdf_name in output_variables.items():
-        var_data = data[netcdf_name][::nchans]
+        if netcdf_name not in data:
+            continue
+
+        if has_channels:
+            var_data = data[netcdf_name][::nchans]
+        else:
+            var_data = data[netcdf_name]
         
         # Handle character arrays (2D) - convert to strings
-        if var_data.ndim > 1:
+        if isinstance(var_data, np.ndarray) and var_data.ndim > 1:
             # Convert character array to string array
             if isinstance(var_data[0], np.ndarray):
                 var_data = np.array([''.join(row).strip() for row in var_data])
@@ -173,16 +246,20 @@ def netcdf_to_table(input_file: str, date: str = None, cycle: str = None, sat_id
                 var_data = np.array([str(item).strip() for item in var_data])
         
         table_data[output_name] = pa.array(var_data)
-    
-    # Reshape observations into separate columns for each channel
-    # Reshape from (nobs,) to (n_unique_obs, nchans)
-    obs_reshaped = data['Observation'].reshape(n_unique_obs, nchans)
-    
-    # Create a column for each channel's observation
-    for ch_idx in range(nchans):
-        # Get the actual channel number from sensor_chan or use index
-        chan_num = data['sensor_chan'][ch_idx] if ch_idx < len(data['sensor_chan']) else ch_idx + 1
-        table_data[f'observation_ch{chan_num}'] = pa.array(obs_reshaped[:, ch_idx])
+
+    if has_channels:
+        # Reshape observations into separate columns for each channel
+        # Reshape from (nobs,) to (n_unique_obs, nchans)
+        obs_reshaped = data['Observation'].reshape(n_unique_obs, nchans)
+        
+        # Create a column for each channel's observation
+        sensor_chan = data.get('sensor_chan')
+        for ch_idx in range(nchans):
+            if isinstance(sensor_chan, np.ndarray) and ch_idx < len(sensor_chan):
+                chan_num = sensor_chan[ch_idx]
+            else:
+                chan_num = ch_idx + 1
+            table_data[f'observation_ch{chan_num}'] = pa.array(obs_reshaped[:, ch_idx])
     
     # Create table
     table = pa.Table.from_pydict(table_data)
@@ -298,10 +375,10 @@ def process_netcdf_files(start_date: datetime,
                          obs_type: str,
                          base_dir: str,
                          output_path: str,
+                         config: dict,
                          partition_by_date: bool = True,
                          cycles: list = None,
-                         sat_ids: list = None,
-                         config_path: str = None) -> None:
+                         sat_ids: list = None) -> None:
     """Process multiple NetCDF files and convert to Parquet.
     
     Parameters
@@ -326,23 +403,32 @@ def process_netcdf_files(start_date: datetime,
     sat_ids : list, optional
         List of satellite IDs to process (e.g., ['n20', 'n21', 'npp'])
         If None, uses all satellite IDs from config for the given obs_type
-    config_path : str, optional
-        Path to configuration file
+    config : dict
+        Pre-loaded configuration dictionary
     """
-    # Load configuration
-    config = load_config(config_path)
-    
+    if config is None:
+        raise ValueError("config must be provided (pre-loaded) to process_netcdf_files")
+
     # Get cycles from config if not provided
     if cycles is None:
         cycles = config.get('default_cycles', ['00', '06', '12', '18'])
-    
+
+    obs_cfg = config.get('observations', {}).get(obs_type)
+    if obs_cfg is None:
+        raise ValueError(
+            f"Observation type '{obs_type}' not found in config. "
+            f"Available types: {list(config.get('observations', {}).keys())}"
+        )
+
+    file_obs_type = obs_cfg.get('input_src') or obs_type
+
     # Get satellite IDs from config if not provided
     if sat_ids is None:
-        if obs_type in config['observations']:
-            sat_ids = config['observations'][obs_type]['sat_ids']
-        else:
-            raise ValueError(f"Observation type '{obs_type}' not found in config. "
-                           f"Available types: {list(config['observations'].keys())}")
+        sat_ids = obs_cfg.get('sat_ids')
+    
+    # Allow obs types that do not have a satellite dimension
+    if not sat_ids:
+        sat_ids = [None]
     
     print(f"Processing observation type: {obs_type}")
     print(f"Satellite IDs: {sat_ids}")
@@ -366,12 +452,17 @@ def process_netcdf_files(start_date: datetime,
             for sat_id in sat_ids:
                 # Construct file path: base_dir/gdas.YYYYMMDD/HH/atmos/diag_{obs_type}_{sat_id}_ges.YYYYMMDDHH.nc4
                 date_cycle_str = f"{date_str}{cycle}"
+                if sat_id is None:
+                    file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
+                else:
+                    file_name = f"diag_{file_obs_type}_{sat_id}_ges.{date_cycle_str}.nc4"
+	
                 input_file = os.path.join(
                     base_dir,
                     f"gdas.{date_str}",
                     cycle,
                     "atmos",
-                    f"diag_{obs_type}_{sat_id}_ges.{date_cycle_str}.nc4"
+                    file_name
                 )
                 
                 if not os.path.exists(input_file):
@@ -386,7 +477,8 @@ def process_netcdf_files(start_date: datetime,
                         date=date_partition if partition_by_date else None,
                         cycle=cycle if partition_by_date else None,
                         sat_id=sat_id,
-                        config=config
+                        config=config,
+                        obs_type=obs_type,
                     )
                     tables_for_cycle.append(table)
                     print(f"  -> Created table with {len(table)} rows for {sat_id}")
@@ -423,6 +515,8 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--suffix', required=False, help='Suffix for the output file(s) (optional, not used)')
     parser.add_argument('-a', '--append', action='store_true', help='Append to existing data')
     parser.add_argument('--config', help='Path to configuration YAML file')
+    parser.add_argument('--cycles', help='Comma-separated list of cycles to process (e.g., 00,06,12,18). Overrides config default_cycles.')
+    parser.add_argument('--sat-ids', help='Comma-separated list of satellite IDs to process (e.g., n20,n21,npp). Overrides config observations.<type>.sat_ids.')
     
     args = parser.parse_args()
     
@@ -443,13 +537,17 @@ if __name__ == "__main__":
     
     # Create output directory with obs_type subdirectory
     output_path = os.path.join(output_path, args.type + ".parquet")
-    
-    # Get satellite IDs and cycles from config for this obs_type
-    sat_ids = None
-    if args.type in config.get('observations', {}):
-        sat_ids = config['observations'][args.type].get('sat_ids')
-    
-    cycles = config.get('default_cycles')
+
+    cycles = [c.strip() for c in args.cycles.split(',') if c.strip()] if args.cycles else None
+    sat_ids = [s.strip() for s in args.sat_ids.split(',') if s.strip()] if args.sat_ids else None
+
+    process_kwargs = {
+        'partition_by_date': True,
+    }
+    if cycles is not None:
+        process_kwargs['cycles'] = cycles
+    if sat_ids is not None:
+        process_kwargs['sat_ids'] = sat_ids
     
     # Process files
     process_netcdf_files(
@@ -458,8 +556,6 @@ if __name__ == "__main__":
         args.type,
         base_dir,
         output_path,
-        partition_by_date=True,
-        cycles=cycles,
-        sat_ids=sat_ids,
-        config_path=args.config
+        config,
+        **process_kwargs,
     )
