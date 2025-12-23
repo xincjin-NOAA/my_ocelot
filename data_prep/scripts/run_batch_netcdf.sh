@@ -2,7 +2,7 @@
 #SBATCH -A da-cpu
 #SBATCH -J gen_ocelot_data
 #SBATCH -q batch
-#SBATCH -t 04:00:00
+#SBATCH -t 01:00:00
 #SBATCH --ntasks=24
 #SBATCH --mem=128G
 #SBATCH -o gen_ocelot_data.%J.out
