@@ -79,6 +79,10 @@ class RawAdpsfcBuilder(ObsBuilder):
         for var in ['eastwardWind',
                     'northwardWind',
                     'specificHumidity',
+                    'height_pb',
+                    'stationElevation_pb',
+                    'airPressure_pb',
+                    'pressureMeanSeaLevel_pb',
                     'airTemperatureQuality',
                     'specificHumidityQuality',
                     'airPressureQuality',
@@ -131,6 +135,30 @@ class RawAdpsfcBuilder(ObsBuilder):
                 'source': 'windQuality',
                 'longName': "Wind Quality Marker",
                 'units': "quality_marker"
+            },
+            {
+                'name': 'airPressure_pb',
+                'source': 'airPressure_pb',
+                'longName': 'airPressure_pb',
+                'units': 'hPa',
+            },
+            {
+                'name': 'pressureMeanSeaLevel_pb',
+                'source': 'pressureMeanSeaLevel_pb',
+                'longName': 'pressureMeanSeaLevel_pb',
+                'units': 'hPa',
+            },
+            {
+                'name': 'height_pb',
+                'source': 'height_pb',
+                'longName': 'height_pb',
+                'units': 'm',
+            },
+            {
+                'name': 'stationElevation_pb',
+                'source': 'stationElevation_pb',
+                'longName': 'stationElevation_pb',
+                'units': 'm',
             },
             {
                 'name': "eastwardWind",
