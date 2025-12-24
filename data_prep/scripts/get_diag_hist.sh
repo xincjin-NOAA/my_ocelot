@@ -55,11 +55,14 @@ while [[ ${cdate} -le ${edate} ]]; do
    #  Get deterministics
    # =====================
    # Get initial conditions related to bias correction from previous (guess) cycle
-   $HPSSTAR get ${hpssg_dir}/com_gfs_${prod}_gdas.${yyyymmddg}_${h2g}.gdas_restart.tar ./gdas.${yyyymmddg}/${hhg}/atmos/gdas.t${hhg}z.radstat
+   # $HPSSTAR get ${hpssg_dir}/com_gfs_${prod}_gdas.${yyyymmddg}_${h2g}.gdas_restart.tar ./gdas.${yyyymmddg}/${hhg}/atmos/gdas.t${hhg}z.radstat
+   $HPSSTAR get ${hpssg_dir}/com_gfs_${prod}_gdas.${yyyymmddg}_${h2g}.gdas.tar ./gdas.${yyyymmddg}/${hhg}/atmos/gdas.t${hhg}z.cnvstat
    cd ./gdas.${yyyymmddg}/${hhg}/atmos/
    # tar  -xvf  ./gdas.t${hh}z.radstat --wildcards --no-anchored  '*amsua*'
-   tar  -xvf  ./gdas.t${hhg}z.radstat 
-   rm ./gdas.t${hhg}z.radstat # tar -xvf gdas.t${h2g}z.radstat
+   # tar  -xvf  ./gdas.t${hhg}z.radstat 
+   tar  -xvf  ./gdas.t${hhg}z.cnvstat 
+   rm ./gdas.t${hhg}z.cnvstat # tar -xvf gdas.t${h2g}z.radstat
+   # rm ./gdas.t${hhg}z.radstat # tar -xvf gdas.t${h2g}z.radstat
    # extract the contents of the gzipped file and save to the output file
    find . -type f -name "*.gz" -exec gunzip {} +
    cdate=`$NDATE +6 ${cdate}`

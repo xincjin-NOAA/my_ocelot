@@ -142,6 +142,88 @@ observations:
       - v_Obs_Minus_Forecast_adjusted
       - v_Obs_Minus_Forecast_unadjusted
     input_src: conv_uv
+
+  surface_obs_t:
+    description: "Surface observations (conventional)"
+    row_filter:
+      var: Observation_Type
+      values: [180, 181, 182, 183, 187]
+    obs_vars: 
+      - Station_ID
+      - Observation_Type
+      - Observation_Subtype
+      - Latitude
+      - Longitude
+      - Station_Elevation
+      - Pressure
+      - Height
+      - Time
+      - Observation
+    output_variables:
+      - Station_ID
+      - Observation_Type
+      - Observation_Subtype
+      - Latitude
+      - Longitude
+      - Station_Elevation
+      - Pressure
+      - Height
+      - Time
+      - Observation
+    input_src: conv_t
+  sst:
+    description: "Surface observations (conventional)"
+    obs_vars: 
+      - Station_ID
+      - Observation_Type
+      - Observation_Subtype
+      - Latitude
+      - Longitude
+      - Station_Elevation
+      - Pressure
+      - Height
+      - Time
+      - Observation
+    output_variables:
+      - Station_ID
+      - Observation_Type
+      - Observation_Subtype
+      - Latitude
+      - Longitude
+      - Station_Elevation
+      - Pressure
+      - Height
+      - Time
+      - Observation
+    input_src: conv_sst
+
+  gps:
+    description: "Surface observations (conventional)"
+    obs_vars: 
+      - Station_ID
+      - Observation_Type
+      - Observation_Subtype
+      - Latitude
+      - Longitude
+      - Model_Elevation
+      - Pressure
+      - Height
+      - Time
+      - Incremental_Bending_Angle
+      - Observation
+    output_variables:
+      - Station_ID
+      - Observation_Type
+      - Observation_Subtype
+      - Latitude
+      - Longitude
+      - Model_Elevation
+      - Pressure
+      - Height
+      - Time
+      - Incremental_Bending_Angle
+      - Observation
+    input_src: conv_gps
   ssmis:
     sat_ids:
       - f17
