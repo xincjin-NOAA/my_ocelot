@@ -42,10 +42,17 @@ def _maybe_decode_char_array(arr):
         return arr
 
     if arr.ndim == 2 and arr.dtype.kind in {'S', 'U'} and arr.dtype.itemsize == 1:
-        out = nc.chartostring(arr)
-        if isinstance(out, np.ndarray):
-            return np.array([s.decode('utf-8', errors='replace').strip() if isinstance(s, (bytes, bytearray)) else str(s).strip() for s in out])
-        return out
+        n_rows, n_cols = arr.shape
+        if not arr.flags['C_CONTIGUOUS']:
+            arr = np.ascontiguousarray(arr)
+
+        if arr.dtype.kind == 'S':
+            row_bytes = arr.view(f'S{n_cols}').reshape(n_rows)
+            decoded = np.char.decode(row_bytes, 'utf-8', errors='replace')
+            return np.char.strip(decoded)
+
+        row_str = arr.view(f'U{n_cols}').reshape(n_rows)
+        return np.char.strip(row_str)
 
     return arr
 
