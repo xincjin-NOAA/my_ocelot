@@ -232,6 +232,17 @@ def netcdf_to_table(input_file: str, date: str = None, cycle: str = None, sat_id
                 continue
             if isinstance(var_data, np.ndarray) and var_data.ndim >= 1 and var_data.shape[0] == n_unique_obs:
                 output_variables[var_name] = var_name
+
+    output_variables_lc = {}
+    for output_name, netcdf_name in output_variables.items():
+        output_name_lc = output_name.lower()
+        if output_name_lc in output_variables_lc and output_variables_lc[output_name_lc] != netcdf_name:
+            raise ValueError(
+                "Output variable name collision after lowercasing: "
+                f"'{output_name}' and another variable both map to '{output_name_lc}'."
+            )
+        output_variables_lc[output_name_lc] = netcdf_name
+    output_variables = output_variables_lc
     
     # Add observation variables (same for all channels, so take every nchans-th value)
     # Assuming data is organized as: [obs1_ch1, obs1_ch2, ..., obs1_chN, obs2_ch1, obs2_ch2, ...]
