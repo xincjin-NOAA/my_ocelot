@@ -10,21 +10,21 @@ from bufr.obs_builder import ObsBuilder, add_main_functions, map_path
 
 faulthandler.enable()
 # Encoder YAML (BUFR schema) – separate from any mapping YAML
-ENCODER_YAML = map_path("cris_pca.yaml")
+ENCODER_YAML = map_path("diag_atms.yaml")
 
 
-class CrisPcaObsBuilder(ObsBuilder):
+class AtmsDiagObsBuilder(ObsBuilder):
     """
-    CrIS PCA netCDF reader:
+    Atms Diagnostics netCDF reader:
 
       * DOES NOT use an ObsBuilder mapping YAML
-      * DOES use a BUFR encoder YAML (cris_pca.yaml)
+      * DOES use a BUFR encoder YAML (diag_atms.yaml)
       * Flattens atrack/xtrack/fov -> location
       * Fills a DataContainer matching encoder variable names
     """
 
     def __init__(self):
-        print("\n*** CrisPcaObsBuilder CONSTRUCTOR ***")
+        print("\n*** AtmsDiagObsBuilder CONSTRUCTOR ***")
         print("    ENCODER_YAML =", ENCODER_YAML)
 
         # --- Load YAML FIRST (before calling super) ---
@@ -190,6 +190,6 @@ class CrisPcaObsBuilder(ObsBuilder):
             )
 
         return container
-
+    
 
 add_main_functions(CrisPcaObsBuilder)
