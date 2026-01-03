@@ -11,6 +11,7 @@ TANK_PATH = '/scratch3/NCEPDEV/global/role.glopara/dump'
 # (see docs for python datetime object)
 DATETIME_DIR_FORMAT = 'gdas.%Y%m%d'
 
+DATETIME_DIR_FORMAT_DIAG = '%Y%m%d'
 # Path to the directory that holds the BUFR mapping files
 # (example: '/install_dir/src/spoc/tank/mapping')
 MAPPING_FILE_DIR = '/scratch3/NCEPDEV/da/Xin.C.Jin/git/my_ocelot/data_prep/mapping'

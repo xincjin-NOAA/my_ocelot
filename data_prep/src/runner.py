@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.realpath('..'))
 import config  # noqa: E402
 import settings  # noqa: E402
 
+from netcdf_utils import load_config 
 
 class Parameters:
     def __init__(self):
@@ -23,6 +24,7 @@ class Runner(object):
 
     def __init__(self, data_type, cfg):
         self.config = cfg
+        self.data_type = data_type
 
         if data_type not in self.config.get_data_type_names():
             raise ValueError(f"Data type {data_type} not found in config")
@@ -175,12 +177,72 @@ class PcaRunner(Runner):
         return combined_container
 
 
+class DiagRunner(Runner):
+    """Runner for Diag files with time stamped names."""
+
+    def run(self, comm, parameters: Parameters, seperate: bool = False) -> bufr.DataContainer:
+        print(f'Using DiagRunner: {parameters.__dict__}')
+        combined_container = {}
+
+        base_dir = self.type_config.directory
+        print(self.type_config.config)
+        cycles = ['00', '06', '12', '18']
+        # Allow obs types that do not have a satellite dimension
+        file_obs_type = self.type_config.config.get('file_obs_type')
+        sat_ids = self.type_config.config.get('sat_ids', [None])
+
+        print("=" * 80)
+        print(f"Processing observation type: {file_obs_type}")
+        print(f"Cycles: {cycles}")
+        print(f"Date range: {parameters.start_time.strftime('%Y-%m-%d')} to {parameters.stop_time.strftime('%Y-%m-%d')}")
+        print("=" * 80)
+
+        for day_str in self._day_strs(parameters.start_time, parameters.stop_time):
+            # Process each cycle for this date
+            print(f"Processing date: {day_str}")
+            for cycle in cycles:
+                # Collect all tables for this date/cycle combination
+                # Construct file path: base_dir/gdas.YYYYMMDD/HH/atmos/diag_{obs_type}_{sat_id}_ges.YYYYMMDDHH.nc4
+                date_cycle_str = f"{day_str}{cycle}"
+                if sat_ids[0] is None:
+                    file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
+                else:
+                    file_name = f"diag_{file_obs_type}_{sat_ids[0]}_ges.{date_cycle_str}.nc4"
+
+                input_path = os.path.join(
+                    base_dir,
+                    f"gdas.{day_str}",
+                    cycle,
+                    "atmos",
+                    file_name
+                )
+                
+                if not os.path.exists(input_path):
+                    print(f"File not found: {input_path}, skipping...")
+                    continue
+
+                container = self._make_obs(comm, input_path)
+                combined_container[cycle]=container
+                    
+        return combined_container
+
+    def _day_strs(self, start: datetime, end: datetime) -> list:
+        day = start
+        days = []
+        while day <= end:
+            days.append(day.strftime(settings.DATETIME_DIR_FORMAT_DIAG))
+            day += timedelta(days=1)
+
+        return days
+
 def run(comm, data_type, parameters: Parameters, seperate: bool = False, cfg=config.Config()) -> (bufr.encoders.Description, bufr.DataContainer):
     type_cfg = cfg.get_data_type(data_type)
     if type_cfg.type == 'tank':
         runner = TankRunner(data_type, cfg)
     elif type_cfg.type == 'pca':
         runner = PcaRunner(data_type, cfg)
+    elif type_cfg.type == 'diag':
+        runner = DiagRunner(data_type, cfg)
     else:
         raise ValueError(f"Unknown data type {type_cfg.type}")
 

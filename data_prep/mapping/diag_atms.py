@@ -31,6 +31,8 @@ class AtmsDiagObsBuilder(ObsBuilder):
             self.config = load_config(mapping_path)
             
         data = netcdf_to_table(input_path, self.config)
+        print(f"variables in data: {data.schema.names}")
+        
         return data
     
 

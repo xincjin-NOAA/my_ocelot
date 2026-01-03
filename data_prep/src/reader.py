@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.realpath('/'))
 from zarr_encoder import Encoder as ZarrEncoder  # noqa: E402
 from parquet_encoder import Encoder as ParquetEncoder  # noqa: E402
 from cycle_parquet_encoder import Encoder as CycleParquetEncoder  # noqa: E402
+from diag_parquet_encoder import Encoder as DiagParquetEncoder  # noqa: E402
 import runner  # noqa: E402
 import settings  # noqa: E402
 
@@ -257,7 +258,7 @@ def _append_data_for_day(comm,
     parameters.start_time = start_datetime
     parameters.stop_time = end_datetime
 
-    seperate = output_type == 'cycle_parquet'
+    seperate = output_type in ['cycle_parquet', 'diag_parquet']
     description, container = runner.run(comm, data_type, parameters, seperate=seperate)
 
     if comm.rank() == 0:
@@ -294,6 +295,8 @@ def _append_data_for_day(comm,
             ParquetEncoder(description).encode(container, f'{output_path}', append=True)
         elif output_type == 'cycle_parquet':
             CycleParquetEncoder(description).encode(container, f'{output_path}', append=True, date=date_str)
+        elif output_type == 'diag_parquet':
+            DiagParquetEncoder(description).encode(container, f'{output_path}', append=True, date=date_str)
         else:
             raise ValueError(f"Unsupported output type: {output_type}")
 
@@ -306,7 +309,7 @@ if __name__ == "__main__":
     parser.add_argument('start_date')
     parser.add_argument('end_date')
     parser.add_argument('type')
-    parser.add_argument('output_type', choices=['zarr', 'parquet', 'cycle_parquet'], help='Output file type')
+    parser.add_argument('output_type', choices=['zarr', 'parquet', 'cycle_parquet', 'diag_parquet'], help='Output file type')
     parser.add_argument('-s', '--suffix', required=False, help='Suffix for the output file(s)')
     parser.add_argument('-a', '--append', action='store_true', help='Append to existing data')
 
@@ -320,3 +323,6 @@ if __name__ == "__main__":
         create_monthly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
     elif args.output_type == 'cycle_parquet':
         create_yearly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
+    elif args.output_type == 'diag_parquet':
+        create_yearly_data(start_date, end_date, args.type, args.output_type, args.suffix, args.append)
+
