@@ -1,15 +1,28 @@
 dimensions:
+  
   - name: location
-    source: "location"
+    source: nobs
     path: "*"
 
-  - name: npc_global
-    source: npc_global
-    path: "*/NPCGLOBAL"
+  - name: channel
+    source: chaninfoidx
+    path: "*"
+      
 
 encoder:
   categories:
     - name: atms
+
+  dimensions:
+    
+    - name: location
+      source: nobs
+      path: "*"
+
+    - name: channel
+      source: chaninfoidx
+      path: "*"
+      
 
   globals:
     - name: source
@@ -68,7 +81,7 @@ encoder:
       units: "degree_north"
 
     - name: brightness_temperature
-      source: observation
+      source: Observation
       longName: "Brightness Temperature"
       units: "K"
 

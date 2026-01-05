@@ -149,6 +149,117 @@ def read_netcdf_diag(file_path: str, obs_type: str, config: dict = None) -> dict
         
     return data
 
+    
+def dims_for_var(varname, dims, dim_path_map):
+    """
+    Map xarray dimension names (e.g. ('location', 'npc_global'))
+    to BUFR query strings using the 'dimensions' section in cris_pca.yaml.
+    """
+    dim_paths = []
+    for d in dims:
+        if d not in dim_path_map:
+            raise RuntimeError(
+                f"_dims_for_var: no mapping for dimension '{d}' "
+                f"in encoder YAML; known: "
+                f"{list(dim_path_map.keys())}"
+            )
+        dim_paths.append(dim_path_map[d])
+
+    print(f"    _dims_for_var({varname}, {dims}) -> {dim_paths}")
+    return dim_paths 
+        
+
+def netcdf_to_container(input_file: str, date: str = None, cycle: str = None, sat_id: str = None, config: dict = None, obs_type: str = None):
+
+   config = load_config()
+obs_type = 'atms'
+
+# Get variable lists from observation-specific config
+obs_config = config.get('observations', {}).get(obs_type, {})
+print(obs_config.keys())
+channel_vars = obs_config.get('channel_vars', [])
+obs_vars = obs_config.get('obs_vars', [])
+
+
+# Extract obs_type from input_file path unless explicitly provided
+if obs_type is None:
+    import re
+    match = re.search(r'diag_([a-z\-]+)_', os.path.basename(file_path))
+    if match:
+        obs_type = match.group(1)
+    else:
+        raise ValueError(f"Could not extract observation type from filename: {file_path}")
+
+# Read NetCDF data
+data = read_netcdf_diag(file_path, obs_type, config)
+
+nchans = data['nchans']
+nobs = data['nobs']
+
+# has_channels = nchans is not None and nchans > 0 and nobs % nchans == 0 and 'Observation' in data
+has_channels = True
+
+if has_channels:
+    n_unique_obs = nobs // nchans
+else:
+    n_unique_obs = nobs
+
+if has_channels:
+    print(f"Reshaping data: {nobs} total obs -> {n_unique_obs} unique obs x {nchans} channels")
+
+yaml_path = '/scratch3/NCEPDEV/da/Xin.C.Jin/git/my_ocelot/data_prep/mapping/diag_atms.yaml'
+type_config = yaml.load(open(yaml_path), Loader=yaml.Loader)
+
+
+container = bufr.DataContainer()
+dim_path_map = {}
+for dim in type_config['encoder'].get("dimensions", []):
+    n = dim["name"]
+    p = dim["path"]
+    dim_path_map[n] = p
+
+
+
+# channel_vars = type_config.get('channel_vars', [])
+# obs_vars = type_config.get('obs_vars', [])
+variables = type_config['encoder']["variables"]
+print(obs_vars)
+print(channel_vars)
+print(variables)
+
+for var in variables:
+    name = var["name"]
+    source = var["source"]
+    print(source)
+    if source in ['Observation',]:
+        xr_dims = ['location', 'channel']
+        if has_channels:
+            # Reshape observations into separate columns for each channel
+            # Reshape from (nobs,) to (n_unique_obs, nchans)
+            var_data = data[source].reshape(n_unique_obs, nchans)
+        else:
+            var_data = data[source]
+    elif source in obs_vars:
+        xr_dims = ['location']
+        if has_channels:
+            var_data = data[source][::nchans]
+        else:
+            var_data = data[source]
+    else:
+        xr_dims = ['location']
+        var_data = data[source]
+    dim_paths = dims_for_var(name, xr_dims, dim_path_map)
+
+    print(f"Adding {name} from {source} with dim_paths {dim_paths}")
+    print("  shape =", var_data.shape)
+
+    container.add(
+        name,
+        data[source],
+        dim_paths
+    )
+    return container
+
 
 def netcdf_to_table(input_file: str, date: str = None, cycle: str = None, sat_id: str = None, config: dict = None, obs_type: str = None):
     """Convert NetCDF diagnostic file to PyArrow Table.
