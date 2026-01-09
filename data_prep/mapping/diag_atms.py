@@ -6,12 +6,16 @@ import bufr
 import yaml
 import faulthandler
 import netCDF4 as nc
+import sys
 
 from bufr.obs_builder import ObsBuilder, add_main_functions, map_path
+base_path = os.path.split(os.path.realpath(__file__))[0]
+
+sys.path.append(os.path.realpath(os.path.join(base_path, '..', 'src')))
+sys.path.append(os.path.realpath(os.path.join(base_path, '..', 'mapping')))
 from diag_base import netcdf_to_container
 
 MAPPING_PATH = map_path("diag_atms.yaml")
-
 
 class AtmsDiagObsBuilder(ObsBuilder):
     """
@@ -21,10 +25,6 @@ class AtmsDiagObsBuilder(ObsBuilder):
 
     def __init__(self):
         super().__init__(MAPPING_PATH, log_name=os.path.basename(__file__))
-
-    def _make_description(self):
-        print("*** _make_description(): using MAPPING_PATH ***")
-        return bufr.encoders.Description(MAPPING_PATH)
 
     def make_obs(self, comm, input_path):
         print("***** Entering make_obs *****")

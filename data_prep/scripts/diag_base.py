@@ -1,1 +1,0 @@
-../mapping/diag_base.py

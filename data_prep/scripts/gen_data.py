@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 base_path = os.path.split(os.path.realpath(__file__))[0]
 
 sys.path.append(os.path.realpath(os.path.join(base_path, '..', 'src')))
-
+sys.path.append(os.path.realpath(os.path.join(base_path, '..', 'mapping')))
 
 def get_reader_path(data_type: str, reader_type: str = 'bufr') -> str:
     """Return path to the reader script.
