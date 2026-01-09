@@ -1,42 +1,74 @@
 
+input:
+  variables:
+    - name: scan_angle
+      source: Scan_Angle
+      longName: "Scan Angle"
+      units: "degree"
+
+    - name: obs_time
+      source: Obs_Time
+      longName: "Observation Time"
+      units: "seconds since 1970-01-01T00:00:00Z"
+   
+    - name: longitude
+      source: Longitude
+      longName: "Longitude (degrees East)"
+      units: "degree_east"
+
+    - name: latitude
+      source: Latitude
+      longName: "Latitude"
+      units: "degree_north"
+
+    - name: observation
+      source: Observation
+      longName: "Brightness Temperature"
+      units: "K"
+
+
+dimensions:
+  - name: location
+    source: "location"    
+    path: "*"
+    
+  - name: channel
+    source: "channel"
+    path: "*/CHANNEL"
+
 encoder:
-  dimensions:
-    - name: location
-      source: "location"    
-      path: "*"
-      
-    - name: channel
-      source: "channel"
-      path: "*/CHANNEL"
-      
+
+  categories:
+    - name: atms
+
   globals:
     - name: source
       type: string
       value: "Diag ATMS netcdf"
 
   variables:
-    - name: Scan_Angle
-      source: Scan_Angle
+    - name: scan_angle
+      source: scan_angle
       longName: "Scan Angle"
       units: "degree"
 
-    - name: Obs_Time
-      source: Obs_Time
+    - name: obs_time
+      source: obs_time
       longName: "Observation Time"
       units: "seconds since 1970-01-01T00:00:00Z"
-
-    - name: Longitude
-      source: Longitude
+   
+    - name: longitude
+      source: longitude
       longName: "Longitude (degrees East)"
       units: "degree_east"
 
-    - name: Latitude
-      source: Latitude
+    - name: latitude
+      source: latitude
       longName: "Latitude"
       units: "degree_north"
 
-    - name: Observation
-      source: Observation
+    - name: observation
+      source: observation
       longName: "Brightness Temperature"
       units: "K"
 

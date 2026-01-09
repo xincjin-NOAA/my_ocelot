@@ -184,22 +184,21 @@ def read_netcdf_diag(file_path: str, obs_type: str, config: dict = None) -> dict
 
 
 def dims_for_var(varname, dims, dim_path_map):
-    """
-    Map xarray dimension names (e.g. ('location', 'npc_global'))
-    to BUFR query strings using the 'dimensions' section in cris_pca.yaml.
-    """
-    dim_paths = []
-    for d in dims:
-        if d not in dim_path_map:
-            raise RuntimeError(
-                f"_dims_for_var: no mapping for dimension '{d}' "
-                f"in encoder YAML; known: "
-                f"{list(dim_path_map.keys())}"
-            )
-        dim_paths.append(dim_path_map[d])
+        """
+        Map xarray dimension names (e.g. ('location', 'npc_global'))
+        to BUFR query strings using the 'dimensions' section in cris_pca.yaml.
+        """
+        dim_paths = []
+        for d in dims:
+            if d not in dim_path_map:
+                raise RuntimeError(
+                    f"_dims_for_var: no mapping for dimension '{d}' "
+                    f"in encoder YAML; known: "
+                    f"{list(dim_path_map.keys())}"
+                )
+            dim_paths.append(dim_path_map[d])
 
-    print(f"    _dims_for_var({varname}, {dims}) -> {dim_paths}")
-    return dim_paths 
+        return dim_paths
         
 
 def netcdf_to_container(input_file: str, date: str = None, cycle: str = None, sat_id: str = None, config: dict = None, obs_type: str = None):
@@ -254,10 +253,10 @@ def netcdf_to_container(input_file: str, date: str = None, cycle: str = None, sa
         dim_path_map[n] = p
     
     
-    
+    print(dim_path_map)
     # channel_vars = type_config.get('channel_vars', [])
     # obs_vars = type_config.get('obs_vars', [])
-    variables = type_config['encoder']["variables"]
+    variables = type_config['input']["variables"]
     print(obs_vars)
     print(channel_vars)
     print(variables)
@@ -285,9 +284,8 @@ def netcdf_to_container(input_file: str, date: str = None, cycle: str = None, sa
             var_data = data[source]
         dim_paths = dims_for_var(name, xr_dims, dim_path_map)
     
-        print(f"Adding {name} from {source} with dim_paths {dim_paths}")
         print("  shape =", var_data.shape)
-    
+        print(f"Adding variable '{name}' from source '{source}' with dims {xr_dims} -> paths {dim_paths}")
         container.add(
             name,
             data[source],
