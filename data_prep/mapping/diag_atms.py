@@ -7,9 +7,8 @@ import yaml
 import faulthandler
 import netCDF4 as nc
 
-from  netcdf_utils import load_config, netcdf_to_container, read_netcdf_diag
 from bufr.obs_builder import ObsBuilder, add_main_functions, map_path
-
+from diag_base import netcdf_to_container
 
 MAPPING_PATH = map_path("diag_atms.yaml")
 
@@ -30,8 +29,8 @@ class AtmsDiagObsBuilder(ObsBuilder):
     def make_obs(self, comm, input_path):
         print("***** Entering make_obs *****")
         mapping_path = list(self.map_dict.values())[0]
-        if not self.config:
-            self.config = load_config(mapping_path)
+        # if not self.config:
+        #     self.config = load_config(mapping_path)
             
         data = netcdf_to_container(input_path, self.config)
         print(f"variables in data: {data.list()}")

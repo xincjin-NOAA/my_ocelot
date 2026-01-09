@@ -215,7 +215,7 @@ def netcdf_to_container(input_file: str, date: str = None, cycle: str = None, sa
     
     container = bufr.DataContainer()
     dim_path_map = {}
-    for dim in type_config['encoder'].get("dimensions", []):
+    for dim in type_config.get("dimensions", []):
         n = dim["name"]
         p = dim["path"]
         dim_path_map[n] = p

@@ -1,86 +1,41 @@
-dimensions:
-  
-  - name: location
-    source: nobs
-    path: "*"
-
-  - name: channel
-    source: chaninfoidx
-    path: "*"
-      
 
 encoder:
-  categories:
-    - name: atms
-
   dimensions:
-    
     - name: location
-      source: nobs
-      path: "*"
-
-    - name: channel
-      source: chaninfoidx
+      source: "location"    
       path: "*"
       
-
+    - name: channel
+      source: "channel"
+      path: "*/CHANNEL"
+      
   globals:
     - name: source
       type: string
       value: "Diag ATMS netcdf"
 
   variables:
-    - name: scan_angle
+    - name: Scan_Angle
       source: Scan_Angle
       longName: "Scan Angle"
       units: "degree"
 
-    - name: sun_glint_angle
-      source: Sun_Glint_Angle
-      longName: "Sun Glint Angle"
-      units: "degree"
-
-    - name: sol_azimuth_angle
-      source: Sol_Azimuth_Angle
-      longName: "Solar Azimuth Angle"
-      units: "degree"
-
-    - name: sol_zenith_angle
-      source: Sol_Zenith_Angle
-      longName: "Solar Zenith Angle"
-      units: "degree"
-
-    - name: sat_azimuth_angle
-      source: Sat_Azimuth_Angle
-      longName: "Satellite Azimuth Angle"
-      units: "degree"
-
-    - name: sat_zenith_angle
-      source: Sat_Zenith_Angle
-      longName: "Satellite Zenith Angle"
-      units: "degree"
-
-    - name: scan_position
-      source: Scan_Position
-      longName: "Scan Position"
-      units: "1"
-
-    - name: obs_time
+    - name: Obs_Time
       source: Obs_Time
       longName: "Observation Time"
       units: "seconds since 1970-01-01T00:00:00Z"
 
-    - name: longitude
+    - name: Longitude
       source: Longitude
       longName: "Longitude (degrees East)"
       units: "degree_east"
 
-    - name: latitude
+    - name: Latitude
       source: Latitude
       longName: "Latitude"
       units: "degree_north"
 
-    - name: brightness_temperature
+    - name: Observation
       source: Observation
       longName: "Brightness Temperature"
       units: "K"
