@@ -1,4 +1,11 @@
 
+sat_ids: 
+  - npp
+  - n20
+  - n21
+
+description: "Advanced Technology Microwave Sounder"
+
 input:
   variables:
     - name: scan_angle

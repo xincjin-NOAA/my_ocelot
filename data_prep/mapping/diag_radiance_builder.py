@@ -18,57 +18,36 @@ config_base = {
         "input": "/scratch5/purged/Xin.C.Jin/my_ocelot/diag",
         "output": "/scratch3/NCEPDEV/stmp/Xin.C.Jin/temp/ocelot",
     },
-    "observations": {
-        "atms": {
-            "sat_ids": ["n20", "n21", "npp"],
-            "description": "Advanced Technology Microwave Sounder",
-            "channel_vars": [
-                "chaninfoidx",
-                "frequency",
-                "polarization",
-                "wavenumber",
-                "error_variance",
-                "mean_lapse_rate",
-                "use_flag",
-                "sensor_chan",
-                "satinfo_chan",
-            ],
-            "geo_vars": [
-                "Channel_Index",
-                "Observation_Class",
-                "Latitude",
-                "Longitude",
-                "Elevation",
-                "Obs_Time",
-                "Scan_Position",
-                "Sat_Zenith_Angle",
-                "Sat_Azimuth_Angle",
-                "Sol_Zenith_Angle",
-                "Sol_Azimuth_Angle",
-                "Sun_Glint_Angle",
-                "Scan_Angle",
-                "Water_Fraction",
-            ],
-            "obs_vars": [
-                "Observation",
-            ],
-            "output_variables": {
-                "latitude": "Latitude",
-                "longitude": "Longitude",
-                "obs_time": "Obs_Time",
-                "scan_position": "Scan_Position",
-                "sat_zenith_angle": "Sat_Zenith_Angle",
-                "sat_azimuth_angle": "Sat_Azimuth_Angle",
-                "sol_zenith_angle": "Sol_Zenith_Angle",
-                "sol_azimuth_angle": "Sol_Azimuth_Angle",
-                "sun_glint_angle": "Sun_Glint_Angle",
-                "scan_angle": "Scan_Angle",
-            },
-        }
-    },
-    "default_cycles": ["00", "06", "12", "18"],
-    "file_pattern": "diag_{obs_type}_{sat_id}_ges.{date_cycle}.nc4",
-    "dir_pattern": "gdas.{date}/{cycle}/atmos",
+    "channel_vars": [
+        "chaninfoidx",
+        "frequency",
+        "polarization",
+        "wavenumber",
+        "error_variance",
+        "mean_lapse_rate",
+        "use_flag",
+        "sensor_chan",
+        "satinfo_chan",
+    ],
+    "geo_vars": [
+        "Channel_Index",
+        "Observation_Class",
+        "Latitude",
+        "Longitude",
+        "Elevation",
+        "Obs_Time",
+        "Scan_Position",
+        "Sat_Zenith_Angle",
+        "Sat_Azimuth_Angle",
+        "Sol_Zenith_Angle",
+        "Sol_Azimuth_Angle",
+        "Sun_Glint_Angle",
+        "Scan_Angle",
+        "Water_Fraction",
+    ],
+    "obs_vars": [
+        "Observation",
+    ],
 }
 
 
@@ -81,7 +60,13 @@ class RadianceDiagObsBuilder(ObsBuilder):
     def __init__(self):
         super().__init__(MAPPING_PATH, log_name=os.path.basename(__file__))
         self.config = config_base
-        self.obs_config = self.config.get('observations', {}).get('atms', {})
+        with open(MAPPING_PATH, 'r') as f:
+            self.type_config = yaml.safe_load(f)
+        self.channel_vars = self.config.get('channel_vars', [])
+        self.obs_vars = self.config.get('obs_vars', [])
+        self.geo_vars = self.config.get('geo_vars', [])
+        self.obs_dim_name = self.type_config.get('obs_dim_name', 'nobs')
+        self.dim_path_map = {dim["name"]: dim["path"] for dim in self.type_config.get("dimensions", [])}
 
     def make_obs(self, comm, input_path):
         print("***** Entering make_obs *****")
@@ -94,162 +79,74 @@ class RadianceDiagObsBuilder(ObsBuilder):
         
         return data
 
-    def dims_for_var(dims, dim_path_map):
+    def dims_for_var(self, dims, dim_path_map):
         return [dim_path_map[d] for d in dims]
 
-    def read_netcdf_diag(obs_config) -> dict:
-        """Read NetCDF diagnostic file and return data as a dictionary.
-        
-        Parameters
-        ----------
-        file_path : str
-            Path to the NetCDF file
-        obs_type : str
-            Observation type (e.g., 'atms', 'cris')
-        config : dict, optional
-            Configuration dictionary. If None, loads default config.
-            
-        Returns
-        -------
-        dict
-            Dictionary containing all variables from the NetCDF file
-        """
-        file_path = obs_config.get('file_path')
-        channel_vars = obs_config.get('channel_vars', [])
-        obs_vars = obs_config.get('obs_vars', [])
-        geo_vars = obs_config.get('ger_vars', [])
-        obs_dim_name = obs_config.get('obs_dim_name', 'nobs')
+    def read_netcdf_diag(self,file_path, obs_config) -> dict:
+
         with nc.Dataset(file_path, 'r') as ncfile:
             # Read dimensions
             nchans = len(ncfile.dimensions['nchans']) if 'nchans' in ncfile.dimensions else None
 
-            nobs = len(ncfile.dimensions[obs_dim_name])
-            
+            nobs = len(ncfile.dimensions[self.obs_dim_name])
+
             print(f"Reading NetCDF file: {file_path}")
-            print(f"  nchans: {nchans}, {obs_dim_name}: {nobs}")
-            
+            print(f"  nchans: {nchans}, {self.obs_dim_name}: {nobs}")
+            data = {}
             # Read channel information
-            for var_name in channel_vars:
-                if var_name in ncfile.variables:
-                    data[var_name] = _maybe_decode_char_array(ncfile.variables[var_name][:])
-                else:
-                    print(f"Warning: Variable '{var_name}' not found in NetCDF file")
-            
-            # Read observation data
-            for var_name in obs_vars:
+            for var_name in self.channel_vars + self.geo_vars + self.obs_vars:
                 if var_name in ncfile.variables:
                     data[var_name] = _maybe_decode_char_array(ncfile.variables[var_name][:])
                 else:
                     print(f"Warning: Variable '{var_name}' not found in NetCDF file")
 
-            row_filter = obs_config.get('row_filter') or obs_config.get('filter_by_observation_type')
-            if row_filter:
-                filter_var = row_filter.get('var')
-                filter_values = row_filter.get('values')
-                if filter_var and filter_values and filter_var in data:
-                    filter_arr = data[filter_var]
-
-                    if nchans is not None and nobs % nchans == 0 and getattr(filter_arr, 'shape', None) and filter_arr.shape[0] == (nobs // nchans):
-                        mask_unique = np.isin(filter_arr, filter_values)
-                        mask = np.repeat(mask_unique, nchans)
-                    else:
-                        mask = np.isin(filter_arr, filter_values)
-
-                    if getattr(mask, 'shape', None) and mask.shape[0] == nobs:
-                        for k, v in list(data.items()):
-                            if isinstance(v, np.ndarray) and v.ndim >= 1 and v.shape[0] == nobs:
-                                data[k] = v[mask]
-                        nobs = int(mask.sum())
-            
             # Store dimensions
             data['nchans'] = nchans
             data['nobs'] = nobs
-            
+
         return data
-        
+
+    def get_diag_data(self, input_file: str, config: dict = None):
+        # Placeholder for any preprocessing steps needed before reading the NetCDF file
+        print(f"Preparing to read diagnostic data from {input_file}")
+        data = self.read_netcdf_diag(input_file, config)
+        return data
+
     def netcdf_to_container(self, input_file: str, date: str = None, cycle: str = None, sat_id: str = None, 
                             config: dict = None, obs_type: str = None):
 
-        if config == None:
-            config = config_base
-        obs_type = 'atms'
-        file_path = input_file
-        
-        # Get variable lists from observation-specific config
-        obs_config = config.get('observations', {}).get(obs_type, {})
-        print(obs_config.keys())
-        channel_vars = obs_config.get('channel_vars', [])
-        obs_vars = obs_config.get('obs_vars', [])
-        
-        
-        # Extract obs_type from input_file path unless explicitly provided
-        if obs_type is None:
-            import re
-            match = re.search(r'diag_([a-z\-]+)_', os.path.basename(file_path))
-            if match:
-                obs_type = match.group(1)
-            else:
-                raise ValueError(f"Could not extract observation type from filename: {file_path}")
-        
-        # Read NetCDF data
-        data = read_netcdf_diag(file_path, obs_type, config)
-        
+        data = self.get_diag_data(input_file, config)
+       
         nchans = data['nchans']
         nobs = data['nobs']
-        
+
         # has_channels = nchans is not None and nchans > 0 and nobs % nchans == 0 and 'Observation' in data
-        has_channels = True
-        
-        if has_channels:
-            n_unique_obs = nobs // nchans
-        else:
-            n_unique_obs = nobs
-        
-        if has_channels:
-            print(f"Reshaping data: {nobs} total obs -> {n_unique_obs} unique obs x {nchans} channels")
-        
-        yaml_path = '/scratch3/NCEPDEV/da/Xin.C.Jin/git/my_ocelot/data_prep/mapping/diag_atms.yaml'
-        type_config = yaml.load(open(yaml_path), Loader=yaml.Loader)
-        
-        
+
+        n_unique_obs = nobs // nchans
+        print(f"Reshaping data: {nobs} total obs -> {n_unique_obs} unique obs x {nchans} channels")
+
         container = bufr.DataContainer()
-        dim_path_map = {}
-        for dim in type_config.get("dimensions", []):
-            n = dim["name"]
-            p = dim["path"]
-            dim_path_map[n] = p
-        
-        
-        print(dim_path_map)
+
         # channel_vars = type_config.get('channel_vars', [])
         # obs_vars = type_config.get('obs_vars', [])
-        variables = type_config['input']["variables"]
-        print(obs_vars)
-        print(channel_vars)
-        print(variables)
-        
+        variables = self.type_config['input']["variables"]
+
         for var in variables:
             name = var["name"]
             source = var["source"]
             print(source)
-            if source in ['Observation',]:
+            if source in self.obs_vars:
                 xr_dims = ['location', 'channel']
-                if has_channels:
-                    # Reshape observations into separate columns for each channel
-                    # Reshape from (nobs,) to (n_unique_obs, nchans)
-                    var_data = data[source].reshape(n_unique_obs, nchans)
-                else:
-                    var_data = data[source]
-            elif source in obs_vars:
+                # Reshape observations into separate columns for each channel
+                # Reshape from (nobs,) to (n_unique_obs, nchans)
+                var_data = data[source].reshape(n_unique_obs, nchans)
+
+            elif source in self.geo_vars:
                 xr_dims = ['location']
-                if has_channels:
-                    var_data = data[source][::nchans]
-                else:
-                    var_data = data[source]
+                var_data = data[source][::nchans]
             else:
-                xr_dims = ['location']
-                var_data = data[source]
-            dim_paths = dims_for_var(name, xr_dims, dim_path_map)
+                continue  # Skip variables not in geo_vars or obs_vars
+            dim_paths = self.dims_for_var(xr_dims, self.dim_path_map)
         
             print("  shape =", var_data.shape)
             print(f"Adding variable '{name}' from source '{source}' with dims {xr_dims} -> paths {dim_paths}")
