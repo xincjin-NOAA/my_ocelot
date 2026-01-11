@@ -50,107 +50,107 @@ encoder:
       value: "Diag ATMS netcdf"
 
   variables:
-    - name: sat_id
+    - name: MetaData/sat_id
       source: sat_id
       longName: "Satellite ID"
       units: "1"
 
-    - name: timestamp
+    - name: MetaData/timestamp
       source: timestamp
       longName: "Observation Time"
       units: "seconds since 1970-01-01T00:00:00Z"
 
-    - name: channel_index
+    - name: MetaData/channel_index
       source: channel_index
       longName: "Channel Index"
       units: "1"
 
-    - name: observation_class
+    - name: MetaData/observation_class
       source: observation_class
       longName: "Observation Class"
       units: "1"
 
-    - name: latitude
+    - name: MetaData/latitude
       source: latitude
       longName: "Latitude"
       units: "degree_north"
 
-    - name: longitude
+    - name: MetaData/longitude
       source: longitude
       longName: "Longitude (degrees East)"
       units: "degree_east"
 
-    - name: elevation
+    - name: MetaData/elevation
       source: elevation
       longName: "Surface Elevation"
       units: "m"
 
-    - name: obs_time
+    - name: MetaData/obs_time
       source: obs_time
       longName: "Observation Time Offset"
       units: "hours"
 
-    - name: scan_position
+    - name: MetaData/scan_position
       source: scan_position
       longName: "Scan Position"
       units: "1"
 
-    - name: sat_zenith_angle
+    - name: MetaData/sat_zenith_angle
       source: sat_zenith_angle
       longName: "Satellite Zenith Angle"
       units: "degree"
 
-    - name: sat_azimuth_angle
+    - name: MetaData/sat_azimuth_angle
       source: sat_azimuth_angle
       longName: "Satellite Azimuth Angle"
       units: "degree"
 
-    - name: sol_zenith_angle
+    - name: MetaData/sol_zenith_angle
       source: sol_zenith_angle
       longName: "Solar Zenith Angle"
       units: "degree"
 
-    - name: sol_azimuth_angle
+    - name: MetaData/sol_azimuth_angle
       source: sol_azimuth_angle
       longName: "Solar Azimuth Angle"
       units: "degree"
 
-    - name: sun_glint_angle
+    - name: MetaData/sun_glint_angle
       source: sun_glint_angle
       longName: "Sun Glint Angle"
       units: "degree"
 
-    - name: scan_angle
+    - name: MetaData/scan_angle
       source: scan_angle
       longName: "Scan Angle"
       units: "degree"
 
-    - name: water_fraction
+    - name: MetaData/water_fraction
       source: water_fraction
       longName: "Water Fraction"
       units: "1"
 
-    - name: observation
+    - name: ObsSpace/observation
       source: observation
       longName: "Brightness Temperature"
       units: "K"
 
-    - name: obs_minus_forecast_unadjusted
+    - name: ObsSpace/obs_minus_forecast_unadjusted
       source: obs_minus_forecast_unadjusted
       longName: "Observation Minus Forecast (Unadjusted)"
       units: "K"
 
-    - name: obs_minus_forecast_adjusted
+    - name: ObsSpace/obs_minus_forecast_adjusted
       source: obs_minus_forecast_adjusted
       longName: "Observation Minus Forecast (Adjusted)"
       units: "K"
 
-    - name: inverse_observation_error
+    - name: ObsSpace/inverse_observation_error
       source: inverse_observation_error
       longName: "Inverse Observation Error"
       units: "1/K"
 
-    - name: qc_flag
+    - name: ObsSpace/qc_flag
       source: qc_flag
       longName: "Quality Control Flag"
       units: "1"

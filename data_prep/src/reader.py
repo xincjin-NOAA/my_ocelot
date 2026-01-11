@@ -212,7 +212,7 @@ def create_yearly_data(start_date: datetime,
         year_ranges.append((current, year_end))
         current = current.replace(year=current.year + 1, month=1, day=1)
 
-    extension = 'zarr' if output_type == 'zarr' else 'pqt'
+    extension = 'zarr' if output_type == 'zarr' else 'parquet'
 
     # Generate output paths for each year
     output_paths = {}
@@ -221,7 +221,10 @@ def create_yearly_data(start_date: datetime,
             file_name = f"{data_type}_{suffix}_{ystart:%Y}.{extension}"
         else:
             file_name = f"{data_type}_{ystart:%Y}.{extension}"
-        output_paths[(ystart, yend)] = os.path.join(settings.OUTPUT_PATH, file_name)
+        if output_type == 'diag_parquet':
+            output_paths[(ystart, yend)] = os.path.join(settings.OUTPUT_PATH_DIAG, file_name)
+        else:
+            output_paths[(ystart, yend)] = os.path.join(settings.OUTPUT_PATH, file_name)
 
     if output_type == 'zarr':
         if comm.rank() == 0:

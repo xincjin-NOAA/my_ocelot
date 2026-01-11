@@ -18,6 +18,8 @@ MAPPING_FILE_DIR = '/scratch3/NCEPDEV/da/Xin.C.Jin/git/my_ocelot/data_prep/mappi
 
 OUTPUT_PATH = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/global/dev'
 
+OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_global'
+
 BUFR_TABLE_DIR = '/scratch3/NCEPDEV/da/Ronald.McLaren/src/NCEPLIBS-bufr/tables'
 
 # The range of latitude and longitude for the continental US

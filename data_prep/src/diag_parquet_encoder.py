@@ -51,7 +51,7 @@ class Encoder(bufr.encoders.EncoderBase):
         all_tables = []
         
         for cycle_key, cycle_container in container.items():
-            print(f"Processing cycle: {cycle_key}")
+            # print(f"Processing cycle: {cycle_key}")
             for category in cycle_container.all_sub_categories():
                 substitutions = {}
                 for idx, key in enumerate(cycle_container.get_category_map().keys()):
@@ -72,7 +72,7 @@ class Encoder(bufr.encoders.EncoderBase):
             
             # Debug: Print partition info
             print(f"Writing partitioned dataset with columns: {partition_cols}")
-            print(f"Combined table schema: {combined_table.schema}")
+            # print(f"Combined table schema: {combined_table.schema}")
             print(f"Number of rows: {len(combined_table)}")
             if date is not None:
                 print(f"Unique dates: {combined_table['date'].unique().to_pylist()}")
@@ -108,6 +108,7 @@ class Encoder(bufr.encoders.EncoderBase):
         # Get number of rows for partition columns
         timestamps = container.get("variables/obs_time", category)
         num_rows = len(timestamps)
+        # print(f"Building table for category {category} with {num_rows} rows")
 
         # Track field names to avoid duplicates
         field_names = set()
@@ -131,7 +132,8 @@ class Encoder(bufr.encoders.EncoderBase):
         field_names.add("time")
 
         dim_label_map = {d.name().lower(): d.labels for d in dims.dims()}
-        
+        # print(f"Dimension label map: {dim_label_map}")
+
         for var in self.description.get_variables():
             dim_names = [n.lower() for n in dims.dim_names_for_var(var["name"])]
             if not dim_names:
@@ -149,7 +151,7 @@ class Encoder(bufr.encoders.EncoderBase):
                 raise ValueError(f"Variable {var['source']} not found in the container")
 
             var_data = container.get(source_key, category)
-
+            # print(f"Processing variable '{var_name}' with shape {var_data.shape} and dimensions {dim_names}")
             meta = self._field_metadata(var)
 
             if len(var_data.shape) == 1:
@@ -159,7 +161,8 @@ class Encoder(bufr.encoders.EncoderBase):
                     fields.append(pa.field(var_name, array.type, metadata=meta))
                     field_names.add(var_name)
             elif len(var_data.shape) == 2:
-                labels = dim_label_map[dim_names[1]]
+                #labels = dim_label_map[dim_names[1]]
+                labels = [f"{i:02d}" for i in range(1, var_data.shape[1] + 1)]  #TODO: Use actual labels if available
                 for i in range(var_data.shape[1]):
                     col_name = f"{var_name}_{dim_names[1]}_{labels[i]}"
                     if col_name not in field_names:

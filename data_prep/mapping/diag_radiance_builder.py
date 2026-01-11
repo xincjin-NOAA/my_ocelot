@@ -157,9 +157,12 @@ class RadianceDiagObsBuilder(ObsBuilder):
             self.log.debug(f"Adding variable '{name}' from source '{source}' with dims {xr_dims} -> paths {dim_paths}")
             container.add(
                 name,
-                data[source],
+                var_data,
                 dim_paths
             )
+        for category in container.all_sub_categories():
+            timestamps = container.get("variables/obs_time", category)
+            self.log.debug(f"Timestamps: {timestamps.shape}")
         return container
 
     def _maybe_decode_char_array(self, arr):

@@ -15,7 +15,7 @@ from bufr.obs_builder import  add_main_functions, map_path
 
 base_path = os.path.split(os.path.realpath(__file__))[0]
 sys.path.append(os.path.realpath(os.path.join(base_path, '..', 'mapping')))
-os.environ["LOG_LEVEL"] = "DEBUG"
+# os.environ["LOG_LEVEL"] = "DEBUG"
 from diag_radiance_builder import RadianceDiagObsBuilder
 
 MAPPING_PATH = map_path("diag_atms.yaml")
