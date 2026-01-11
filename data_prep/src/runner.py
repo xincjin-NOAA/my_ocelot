@@ -204,26 +204,29 @@ class DiagRunner(Runner):
                 # Collect all tables for this date/cycle combination
                 # Construct file path: base_dir/gdas.YYYYMMDD/HH/atmos/diag_{obs_type}_{sat_id}_ges.YYYYMMDDHH.nc4
                 date_cycle_str = f"{day_str}{cycle}"
-                if sat_ids[0] is None:
-                    file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
-                else:
-                    file_name = f"diag_{file_obs_type}_{sat_ids[0]}_ges.{date_cycle_str}.nc4"
+                for sat_id in sat_ids:
+                    if sat_ids is None:
+                        file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
+                    else:
+                        file_name = f"diag_{file_obs_type}_{sat_id}_ges.{date_cycle_str}.nc4"
 
-                input_path = os.path.join(
-                    base_dir,
-                    f"gdas.{day_str}",
-                    cycle,
-                    "atmos",
-                    file_name
-                )
-                
-                if not os.path.exists(input_path):
-                    print(f"File not found: {input_path}, skipping...")
-                    continue
-
-                container = self._make_obs(comm, input_path)
-                combined_container[cycle]=container
+                    input_path = os.path.join(
+                        base_dir,
+                        f"gdas.{day_str}",
+                        cycle,
+                        "atmos",
+                        file_name
+                    )
                     
+                    if not os.path.exists(input_path):
+                        print(f"File not found: {input_path}, skipping...")
+                        continue
+
+                    container = self._make_obs(comm, input_path)
+                    if cycle not in combined_container:
+                        combined_container[cycle] = bufr.DataContainer()
+                    combined_container[cycle].append(container)
+
         return combined_container
 
     def _day_strs(self, start: datetime, end: datetime) -> list:
