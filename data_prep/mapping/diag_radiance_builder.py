@@ -86,7 +86,7 @@ class RadianceDiagObsBuilder(ObsBuilder):
 
             nobs = len(ncfile.dimensions[self.obs_dim_name])
 
-            self.log.debug(f"Reading NetCDF file: {file_path}")
+            self.log.info(f"Reading NetCDF file: {file_path}")
             self.log.debug(f"  nchans: {nchans}, {self.obs_dim_name}: {nobs}")
             data = {}
             # Read channel information
@@ -107,13 +107,13 @@ class RadianceDiagObsBuilder(ObsBuilder):
             m = re.match(r"diag_[^_]+_([^_]+)_ges\.\d+\.nc4", os.path.basename(file_path))
             sat_id = m.group(1)
             if sat_id not in self.sat_ids:
-                self.log.debug(f"Warning: sat_id '{sat_id}' not found in sat_ids list. Skipping.")
+                self.log.warning(f"Warning: sat_id '{sat_id}' not found in sat_ids list. Skipping.")
             data["sat_id"] = np.full(nobs, sat_id, dtype="U16")
         return data
 
     def get_diag_data(self, input_file: str, config: dict = None):
         # Placeholder for any preprocessing steps needed before reading the NetCDF file
-        self.log.debug(f"Preparing to read diagnostic data from {input_file}")
+        self.log.info(f"Preparing to read diagnostic data from {input_file}")
 
         data = self.read_netcdf_diag(input_file, config)
         return data
@@ -149,7 +149,7 @@ class RadianceDiagObsBuilder(ObsBuilder):
                 xr_dims = ['location']
                 var_data = data[source][::nchans]
             else:
-                self.log.debug(f"Warning: Skipping variable '{name}' with source '{source}'")
+                self.log.warning(f"Warning: Skipping variable '{name}' with source '{source}'")
                 continue  # Skip variables not in geo_vars or obs_vars
             dim_paths = self.dims_for_var(xr_dims, self.dim_path_map)
         
