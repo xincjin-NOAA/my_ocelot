@@ -9,11 +9,9 @@ import netCDF4 as nc
 import re
 import sys
 
-from datetime  import datetime
+from datetime  import datetime, timezone
 
 from bufr.obs_builder import ObsBuilder, add_main_functions, map_path
-
-MAPPING_PATH = map_path("diag_atms.yaml")
     
 
 config_base = {
@@ -62,10 +60,10 @@ class RadianceDiagObsBuilder(ObsBuilder):
     and converts them into BUFR observations according to the mapping defined in diag_atms.yaml.
     """
 
-    def __init__(self):
-        super().__init__(MAPPING_PATH, log_name=os.path.basename(__file__))
+    def __init__(self, map_dict, log_name=None):
+        super().__init__(map_dict, log_name=log_name)
         self.config = config_base
-        with open(MAPPING_PATH, 'r') as f:
+        with open(map_dict, 'r') as f:
             self.type_config = yaml.safe_load(f)
         self.channel_vars = self.config.get('channel_vars', [])
         self.obs_vars = self.config.get('obs_vars', [])
@@ -73,17 +71,6 @@ class RadianceDiagObsBuilder(ObsBuilder):
         self.obs_dim_name = self.type_config.get('obs_dim_name', 'nobs')
         self.sat_ids = self.type_config.get('sat_ids', [])
         self.dim_path_map = {dim["name"]: dim["path"] for dim in self.type_config.get("dimensions", [])}
-
-    def make_obs(self, comm, input_path):
-        print("***** Entering make_obs *****")
-        mapping_path = list(self.map_dict.values())[0]
-        # if not self.config:
-        #     self.config = load_config(mapping_path)
-            
-        data = self.netcdf_to_container(input_path, self.config)
-        print(f"variables in data: {data.list()}")
-        
-        return data
 
     def dims_for_var(self, dims, dim_path_map):
         return [dim_path_map[d] for d in dims]
@@ -110,10 +97,10 @@ class RadianceDiagObsBuilder(ObsBuilder):
             data['nchans'] = nchans
             data['nobs'] = nobs
             file_date_str = os.path.basename(file_path).split('.')[-2]
-            file_date = datetime.strptime(file_date_str, '%Y%m%d%H%M%S')
-            data['timestamp'] = (data['Obs_Time'] * 3600).astype(np.int64) + file_date.timestamp()
-            fname = "diag_atms_npp_ges.202401010600.nc4"
-
+            analysis_time = datetime.strptime(file_date_str, "%Y%m%d%H")
+            analysis_time = analysis_time.replace(tzinfo=timezone.utc)
+            data["timestamp"] = (analysis_time.timestamp()+ data["Obs_Time"].astype(np.float64) * 3600.0).astype(np.int64)
+            # Extract sat_id from filename
             m = re.match(r"diag_[^_]+_([^_]+)_ges\.\d+\.nc4", os.path.basename(file_path))
             sat_id = m.group(1)
             if sat_id not in self.sat_ids:
@@ -197,4 +184,3 @@ class RadianceDiagObsBuilder(ObsBuilder):
 
         return arr
 
-add_main_functions(RadianceDiagObsBuilder)
