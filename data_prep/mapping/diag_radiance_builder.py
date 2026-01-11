@@ -50,9 +50,12 @@ config_base = {
     ],
     "obs_vars": [
         "Observation",
+        "Obs_Minus_Forecast_unadjusted",
+        "Obs_Minus_Forecast_adjusted",
+        "Inverse_Observation_Error",
+        "QC_Flag",
     ],
 }
-
 
 class RadianceDiagObsBuilder(ObsBuilder):
     """
@@ -134,10 +137,8 @@ class RadianceDiagObsBuilder(ObsBuilder):
         # obs_vars = type_config.get('obs_vars', [])
         variables = self.type_config['input']["variables"]
 
-        for var in variables:
-            name = var["name"]
-            source = var["source"]
-            print(source)
+        for name, source in variables.items():
+            self.log.debug(source)
             if source in self.obs_vars:
                 xr_dims = ['location', 'channel']
                 # Reshape observations into separate columns for each channel
@@ -152,7 +153,7 @@ class RadianceDiagObsBuilder(ObsBuilder):
                 continue  # Skip variables not in geo_vars or obs_vars
             dim_paths = self.dims_for_var(xr_dims, self.dim_path_map)
         
-            print("  shape =", var_data.shape)
+            self.log.debug(f"  shape =, {var_data.shape}")
             print(f"Adding variable '{name}' from source '{source}' with dims {xr_dims} -> paths {dim_paths}")
             container.add(
                 name,
