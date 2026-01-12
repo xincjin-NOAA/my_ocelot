@@ -215,12 +215,45 @@ data types:
   - name: diag_atms
     type: diag
     file_obs_type: atms
-    sat_ids:
-      - n20
-      - n21
-      - npp
     num_tasks: 12
     batch_days: 15
     mapping: diag_atms.py
     directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
 
+  - name: diag_amsua
+    type: diag
+    file_obs_type: amsua
+    sat_ids: 
+      - n15
+      - n18
+      - n19
+      - metop-b
+      - metop-c
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_amsua.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_avhrr
+    type: diag
+    file_obs_type: avhrr
+    sat_ids:
+      - n18
+      - n19
+      - metop-b
+      - metop-c
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_avhrr.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_ssmis
+    type: diag
+    file_obs_type: ssmis
+    sat_ids:
+      - f17
+      - f18
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_ssmis.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag

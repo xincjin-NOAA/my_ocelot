@@ -1,0 +1,159 @@
+
+sat_ids: 
+  - n18
+  - n19
+  - metop-b
+  - metop-c
+
+description: "Advanced Technology Microwave Sounder"
+
+input:
+  variables:
+    sat_id: sat_id
+    timestamp: timestamp
+    channel_index: Channel_Index
+    observation_class: Observation_Class
+    latitude: Latitude
+    longitude: Longitude
+    elevation: Elevation
+    obs_time: Obs_Time
+    scan_position: Scan_Position
+    sat_zenith_angle: Sat_Zenith_Angle
+    sat_azimuth_angle: Sat_Azimuth_Angle
+    sol_zenith_angle: Sol_Zenith_Angle
+    sol_azimuth_angle: Sol_Azimuth_Angle
+    sun_glint_angle: Sun_Glint_Angle
+    scan_angle: Scan_Angle
+    water_fraction: Water_Fraction
+    observation: Observation
+    obs_minus_forecast_unadjusted: Obs_Minus_Forecast_unadjusted
+    obs_minus_forecast_adjusted: Obs_Minus_Forecast_adjusted
+    inverse_observation_error: Inverse_Observation_Error
+    qc_flag: QC_Flag
+
+
+dimensions:
+  - name: location
+    source: "location"    
+    path: "*"
+    
+  - name: channel
+    source: "channel"
+    path: "*/CHANNEL"
+
+encoder:
+  categories:
+    - name: atms
+
+  globals:
+    - name: source
+      type: string
+      value: "Diag ATMS netcdf"
+
+  variables:
+    - name: MetaData/sat_id
+      source: sat_id
+      longName: "Satellite ID"
+      units: "1"
+
+    - name: MetaData/timestamp
+      source: timestamp
+      longName: "Observation Time"
+      units: "seconds since 1970-01-01T00:00:00Z"
+
+    - name: MetaData/channel_index
+      source: channel_index
+      longName: "Channel Index"
+      units: "1"
+
+    - name: MetaData/observation_class
+      source: observation_class
+      longName: "Observation Class"
+      units: "1"
+
+    - name: MetaData/latitude
+      source: latitude
+      longName: "Latitude"
+      units: "degree_north"
+
+    - name: MetaData/longitude
+      source: longitude
+      longName: "Longitude (degrees East)"
+      units: "degree_east"
+
+    - name: MetaData/elevation
+      source: elevation
+      longName: "Surface Elevation"
+      units: "m"
+
+    - name: MetaData/obs_time
+      source: obs_time
+      longName: "Observation Time Offset"
+      units: "hours"
+
+    - name: MetaData/scan_position
+      source: scan_position
+      longName: "Scan Position"
+      units: "1"
+
+    - name: MetaData/sat_zenith_angle
+      source: sat_zenith_angle
+      longName: "Satellite Zenith Angle"
+      units: "degree"
+
+    - name: MetaData/sat_azimuth_angle
+      source: sat_azimuth_angle
+      longName: "Satellite Azimuth Angle"
+      units: "degree"
+
+    - name: MetaData/sol_zenith_angle
+      source: sol_zenith_angle
+      longName: "Solar Zenith Angle"
+      units: "degree"
+
+    - name: MetaData/sol_azimuth_angle
+      source: sol_azimuth_angle
+      longName: "Solar Azimuth Angle"
+      units: "degree"
+
+    - name: MetaData/sun_glint_angle
+      source: sun_glint_angle
+      longName: "Sun Glint Angle"
+      units: "degree"
+
+    - name: MetaData/scan_angle
+      source: scan_angle
+      longName: "Scan Angle"
+      units: "degree"
+
+    - name: MetaData/water_fraction
+      source: water_fraction
+      longName: "Water Fraction"
+      units: "1"
+
+    - name: ObsSpace/observation
+      source: observation
+      longName: "Brightness Temperature"
+      units: "K"
+
+    - name: ObsSpace/obs_minus_forecast_unadjusted
+      source: obs_minus_forecast_unadjusted
+      longName: "Observation Minus Forecast (Unadjusted)"
+      units: "K"
+
+    - name: ObsSpace/obs_minus_forecast_adjusted
+      source: obs_minus_forecast_adjusted
+      longName: "Observation Minus Forecast (Adjusted)"
+      units: "K"
+
+    - name: ObsSpace/inverse_observation_error
+      source: inverse_observation_error
+      longName: "Inverse Observation Error"
+      units: "1/K"
+
+    - name: ObsSpace/qc_flag
+      source: qc_flag
+      longName: "Quality Control Flag"
+      units: "1"
+
+
