@@ -1,8 +1,7 @@
 
 sat_ids: 
-  - npp
-  - n20
-  - n21
+  - metop-b
+  - metop-c
 
 description: "Advanced Technology Microwave Sounder"
 
@@ -43,11 +42,6 @@ dimensions:
 encoder:
   categories:
     - name: atms
-
-  dimensions:
-    - name: channel
-      source: "channel"
-      path: "*/CHANNEL"
 
   globals:
     - name: source

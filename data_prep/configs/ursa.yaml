@@ -257,3 +257,25 @@ data types:
     batch_days: 15
     mapping: diag_ssmis.py
     directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_iasi
+    type: diag
+    file_obs_type: iasi
+    sat_ids:
+      - metop-b
+      - metop-c
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_iasi.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_cris-fsr
+    type: diag
+    file_obs_type: cris-fsr
+    sat_ids:
+      - n20
+      - n21
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_cris-fsr.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
