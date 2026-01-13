@@ -24,4 +24,8 @@ export LOG_LEVEL=INFO
 # python gen_data.py 2024-01-01 2024-12-31 diag_avhrr diag_parquet
 # python gen_data.py 2024-01-01 2024-12-31 diag_ssmis diag_parquet
 # python gen_data.py 2024-01-01 2024-12-31 diag_iasi diag_parquet
-python gen_data.py 2024-01-01 2024-12-31 diag_cris-fsr diag_parquet
+#python gen_data.py 2024-01-01 2024-12-31 diag_cris-fsr diag_parquet
+#python gen_data.py 2024-01-01 2024-12-31 diag_gps diag_parquet
+#python gen_data.py 2024-01-01 2024-12-31 diag_surface_obs_uv diag_parquet
+#python gen_data.py 2024-01-01 2024-12-31 diag_surface_obs_t diag_parquet
+python gen_data.py 2024-01-01 2024-12-31 diag_sst diag_parquet

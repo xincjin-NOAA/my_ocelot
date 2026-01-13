@@ -106,8 +106,8 @@ class Encoder(bufr.encoders.EncoderBase):
         }
 
         # Get number of rows for partition columns
-        timestamps = container.get("variables/obs_time", category)
-        num_rows = len(timestamps)
+        timestamp = container.get("variables/timestamp", category)
+        num_rows = len(timestamp)
         # print(f"Building table for category {category} with {num_rows} rows")
 
         # Track field names to avoid duplicates
@@ -126,8 +126,8 @@ class Encoder(bufr.encoders.EncoderBase):
             field_names.add("cycle")
 
         # Primary time dimension
-        timestamps = container.get("variables/obs_time", category)
-        data_dict["time"] = pa.array(timestamps)
+        timestamp = container.get("variables/time", category)
+        data_dict["time"] = pa.array(timestamp)
         fields.append(pa.field("time", data_dict["time"].type))
         field_names.add("time")
 

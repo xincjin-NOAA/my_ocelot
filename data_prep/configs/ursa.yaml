@@ -279,3 +279,35 @@ data types:
     batch_days: 15
     mapping: diag_cris-fsr.py
     directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_gps
+    type: diag
+    file_obs_type: conv_gps
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_gps.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_surface_obs_uv
+    type: diag
+    file_obs_type: conv_uv
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_surface_obs_uv.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_surface_obs_t
+    type: diag
+    file_obs_type: conv_t
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_surface_obs_t.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_sst
+    type: diag
+    file_obs_type: conv_sst
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_sst.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag

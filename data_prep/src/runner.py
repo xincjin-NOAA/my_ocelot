@@ -205,7 +205,7 @@ class DiagRunner(Runner):
                 # Construct file path: base_dir/gdas.YYYYMMDD/HH/atmos/diag_{obs_type}_{sat_id}_ges.YYYYMMDDHH.nc4
                 date_cycle_str = f"{day_str}{cycle}"
                 for sat_id in sat_ids:
-                    if sat_ids is None:
+                    if sat_id is None:
                         file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
                     else:
                         file_name = f"diag_{file_obs_type}_{sat_id}_ges.{date_cycle_str}.nc4"

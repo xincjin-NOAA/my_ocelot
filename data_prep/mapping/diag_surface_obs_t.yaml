@@ -1,0 +1,90 @@
+
+description: "Surface observations (conventional)"
+row_filter:
+  var: Observation_Type
+  values: [180, 181, 182, 183, 187]
+
+input:
+  variables:
+    timestamp: timestamp
+    station_id: Station_ID
+    observation_type: Observation_Type
+    observation_subtype: Observation_Subtype
+    latitude: Latitude
+    longitude: Longitude
+    station_elevation: Station_Elevation
+    pressure: Pressure
+    height: Height
+    time: Time
+    observation: Observation
+  input_src: conv_t
+
+dimensions:
+  - name: location
+    source: "location"    
+    path: "*"
+
+encoder:
+  categories:
+    - name: conv_t
+
+  globals:
+    - name: source
+      type: string
+      value: "Diag GPS netcdf"
+
+  variables:
+    - name: MetaData/station_id
+      source: station_id
+      longName: "Station ID"
+      units: "1"
+
+    - name: MetaData/observation_type
+      source: observation_type
+      longName: "Observation Type"
+      units: "1"
+
+    - name: MetaData/observation_subtype
+      source: observation_subtype
+      longName: "Observation Subtype"
+      units: "1"
+
+    - name: MetaData/latitude
+      source: latitude
+      longName: "Latitude"
+      units: "degree_north"
+
+    - name: MetaData/longitude
+      source: longitude
+      longName: "Longitude"
+      units: "degree_east"
+
+    - name: MetaData/station_elevation
+      source: station_elevation
+      longName: "Station Elevation"
+      units: "m"
+
+    - name: MetaData/pressure
+      source: pressure
+      longName: "Pressure"
+      units: "Pa"
+
+    - name: MetaData/height
+      source: height
+      longName: "Height"
+      units: "m"
+
+    - name: MetaData/time
+      source: time
+      longName: "Observation Time"
+      units: "seconds since 1970-01-01T00:00:00Z"
+
+    - name: MetaData/timestamp
+      source: timestamp
+      longName: "Observation Time"
+      units: "seconds since 1970-01-01T00:00:00Z"
+
+    - name: ObsValue/observation
+      source: observation
+      longName: "Observation"
+      units: "1"
