@@ -9,6 +9,7 @@ description: "Advanced Technology Microwave Sounder"
 input:
   variables:
     sat_id: sat_id
+    sensor_chan: sensor_chan
     timestamp: timestamp
     channel_index: Channel_Index
     observation_class: Observation_Class
@@ -46,7 +47,7 @@ encoder:
 
   dimensions:
     - name: channel
-      source: "channel"
+      source: "sensor_chan"
       path: "*/CHANNEL"
 
   globals:
@@ -59,6 +60,12 @@ encoder:
       source: sat_id
       longName: "Satellite ID"
       units: "1"
+
+    - name: MetaData/sensor_chan
+      source: sensor_chan
+      longName: "Sensor Channel"
+      units: "1"
+
 
     - name: MetaData/timestamp
       source: timestamp

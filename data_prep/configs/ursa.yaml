@@ -215,6 +215,10 @@ data types:
   - name: diag_atms
     type: diag
     file_obs_type: atms
+    sat_ids:
+      - n20
+      - n21
+      - npp
     num_tasks: 12
     batch_days: 15
     mapping: diag_atms.py

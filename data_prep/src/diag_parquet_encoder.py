@@ -126,7 +126,7 @@ class Encoder(bufr.encoders.EncoderBase):
             field_names.add("cycle")
 
         # Primary time dimension
-        timestamp = container.get("variables/time", category)
+        timestamp = container.get("variables/timestamp", category)
         data_dict["time"] = pa.array(timestamp)
         fields.append(pa.field("time", data_dict["time"].type))
         field_names.add("time")
@@ -143,7 +143,7 @@ class Encoder(bufr.encoders.EncoderBase):
 
             _, var_name = self._split_source_str(var["name"])
 
-            if var_name.lower() in {"datetime", "time"}:
+            if var_name.lower() in {"datetime", "time", "sensor_chan"}:
                 continue
 
             source_key = var["source"].split("/")[-1]
@@ -161,8 +161,8 @@ class Encoder(bufr.encoders.EncoderBase):
                     fields.append(pa.field(var_name, array.type, metadata=meta))
                     field_names.add(var_name)
             elif len(var_data.shape) == 2:
-                #labels = dim_label_map[dim_names[1]]
-                labels = [f"{i:02d}" for i in range(1, var_data.shape[1] + 1)]  #TODO: Use actual labels if available
+                labels = dim_label_map[dim_names[1]]
+                #labels = [f"{i:02d}" for i in range(1, var_data.shape[1] + 1)]  #TODO: Use actual labels if available
                 for i in range(var_data.shape[1]):
                     col_name = f"{var_name}_{dim_names[1]}_{labels[i]}"
                     if col_name not in field_names:

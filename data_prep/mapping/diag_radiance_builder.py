@@ -148,6 +148,9 @@ class RadianceDiagObsBuilder(ObsBuilder):
             elif source in self.geo_vars:
                 xr_dims = ['location']
                 var_data = data[source][::nchans]
+            elif source in self.channel_vars:
+                xr_dims = ['channel']
+                var_data = data[source]
             else:
                 self.log.warning(f"Warning: Skipping variable '{name}' with source '{source}'")
                 continue  # Skip variables not in geo_vars or obs_vars

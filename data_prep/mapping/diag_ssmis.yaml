@@ -8,6 +8,7 @@ description: "Advanced Technology Microwave Sounder"
 input:
   variables:
     sat_id: sat_id
+    sensor_chan: sensor_chan
     timestamp: timestamp
     channel_index: Channel_Index
     observation_class: Observation_Class
@@ -43,6 +44,12 @@ encoder:
   categories:
     - name: atms
 
+
+  dimensions:
+    - name: channel
+      source: "sensor_chan"
+      path: "*/CHANNEL"
+
   globals:
     - name: source
       type: string
@@ -58,6 +65,11 @@ encoder:
       source: timestamp
       longName: "Observation Time"
       units: "seconds since 1970-01-01T00:00:00Z"
+
+    - name: MetaData/sensor_chan
+      source: sensor_chan
+      longName: "Sensor Channel"
+      units: "1"
 
     - name: MetaData/channel_index
       source: channel_index

@@ -11,6 +11,7 @@ description: "Advanced Technology Microwave Sounder"
 input:
   variables:
     sat_id: sat_id
+    sensor_chan: sensor_chan
     timestamp: timestamp
     channel_index: Channel_Index
     observation_class: Observation_Class
@@ -51,10 +52,21 @@ encoder:
       type: string
       value: "Diag ATMS netcdf"
 
+  dimensions:
+    - name: channel
+      source: "sensor_chan"
+      path: "*/CHANNEL"
+
+
   variables:
     - name: MetaData/sat_id
       source: sat_id
       longName: "Satellite ID"
+      units: "1"
+
+    - name: MetaData/sensor_chan
+      source: sensor_chan
+      longName: "Sensor Channel"
       units: "1"
 
     - name: MetaData/timestamp
