@@ -38,8 +38,10 @@ class AtmsDiagObsBuilder(RadianceDiagObsBuilder):
         #     self.config = load_config(mapping_path)
             
         data = self.netcdf_to_container(input_path, self.config)
-        self.log.debug(f"variables in data: {data.list()}")
-        
+        if isinstance(data, dict):
+            self.log.debug(f"data keys: {list(data.keys())}")
+        else:
+            self.log.debug(f"variables in data: {data.list()}")
         return data
 
 add_main_functions(AtmsDiagObsBuilder)

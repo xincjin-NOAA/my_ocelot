@@ -32,7 +32,7 @@ config_base = {
     ],
     "geo_vars": [
         "Channel_Index",
-        "Observation_Class",
+        # "Observation_Class",
         "Latitude",
         "Longitude",
         "Elevation",
@@ -93,6 +93,9 @@ class RadianceDiagObsBuilder(ObsBuilder):
             for var_name in self.channel_vars + self.geo_vars + self.obs_vars:
                 if var_name in ncfile.variables:
                     data[var_name] = self._maybe_decode_char_array(ncfile.variables[var_name][:])
+                    if var_name in ['Longitude']:
+                       print(f'var name: {var_name}, shape: {data[var_name].shape}, data: {data[var_name][-100:]}')
+                       
                 else:
                     self.log.debug(f"Warning: Variable '{var_name}' not found in NetCDF file")
 
@@ -131,7 +134,11 @@ class RadianceDiagObsBuilder(ObsBuilder):
         n_unique_obs = nobs // nchans
         self.log.debug(f"Reshaping data: {nobs} total obs -> {n_unique_obs} unique obs x {nchans} channels")
 
-        container = bufr.DataContainer()
+        use_bufr = False
+        if use_bufr:
+            container = bufr.BufrContainer()
+        else:
+            container = {}
 
         # channel_vars = type_config.get('channel_vars', [])
         # obs_vars = type_config.get('obs_vars', [])
@@ -148,6 +155,8 @@ class RadianceDiagObsBuilder(ObsBuilder):
             elif source in self.geo_vars:
                 xr_dims = ['location']
                 var_data = data[source][::nchans]
+                if source in ['Longitude']:
+                       print(f'var name: {source}, shape: {var_data.shape}, data: {var_data[-100:]}')
             elif source in self.channel_vars:
                 xr_dims = ['channel']
                 var_data = data[source]
@@ -158,14 +167,25 @@ class RadianceDiagObsBuilder(ObsBuilder):
         
             self.log.debug(f"  shape =, {var_data.shape}")
             self.log.debug(f"Adding variable '{name}' from source '{source}' with dims {xr_dims} -> paths {dim_paths}")
-            container.add(
-                name,
-                var_data,
-                dim_paths
-            )
-        for category in container.all_sub_categories():
-            timestamps = container.get("variables/obs_time", category)
-            self.log.debug(f"Timestamps: {timestamps.shape}")
+            if source in ['Latitude', 'Longitude']:
+                print(f'var name: {name}, source:{source}, shape: {var_data.shape}, data: {var_data[::100]}')
+            
+            if use_bufr:
+                container.add_variable(
+                    name,
+                    var_data,
+                    dim_paths
+                )
+            else:    
+                container[name] = var_data  
+        if use_bufr:    
+            for category in container.all_sub_categories():
+                timestamps = container.get("variables/obs_time", category)
+                self.log.debug(f"Timestamps: {timestamps.shape}")
+                latitude = container.get("variables/latitude", category) 
+                longitude = container.get("variables/longitude", category) 
+                print(f'var name: latitude, shape: {latitude.shape}, data: {latitude[::100]}')  
+                print(f'var name: longitude, shape: {longitude.shape}, data: {longitude[::100]}')
         return container
 
     def _maybe_decode_char_array(self, arr):

@@ -12,7 +12,7 @@ input:
     sensor_chan: sensor_chan
     timestamp: timestamp
     channel_index: Channel_Index
-    observation_class: Observation_Class
+    # observation_class: Observation_Class
     latitude: Latitude
     longitude: Longitude
     elevation: Elevation
@@ -77,20 +77,22 @@ encoder:
       longName: "Channel Index"
       units: "1"
 
-    - name: MetaData/observation_class
-      source: observation_class
-      longName: "Observation Class"
-      units: "1"
+    # - name: MetaData/observation_class
+    #   source: observation_class
+    #   longName: "Observation Class"
+    #   units: "1"
 
     - name: MetaData/latitude
       source: latitude
       longName: "Latitude"
       units: "degree_north"
+      range: [-90, 90]
 
     - name: MetaData/longitude
       source: longitude
       longName: "Longitude (degrees East)"
       units: "degree_east"
+      range: [0, 360]
 
     - name: MetaData/elevation
       source: elevation
