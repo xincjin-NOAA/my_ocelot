@@ -52,15 +52,18 @@ class Encoder(bufr.encoders.EncoderBase):
         
         for cycle_key, cycle_container in container.items():
             # print(f"Processing cycle: {cycle_key}")
-            for category in cycle_container.all_sub_categories():
-                substitutions = {}
-                for idx, key in enumerate(cycle_container.get_category_map().keys()):
-                    substitutions[key] = category[idx]
+            if isinstance(cycle_container, dict):
+                table = self._build_table(cycle_container, [], None, cycle_key, date)
+            else:
+                for category in cycle_container.all_sub_categories():
+                    substitutions = {}
+                    for idx, key in enumerate(cycle_container.get_category_map().keys()):
+                        substitutions[key] = category[idx]
 
                 dims = self.get_encoder_dimensions(cycle_container, category)
                 table = self._build_table(cycle_container, category, dims, cycle_key, date)
-                all_tables.append(table)
-                result[(cycle_key, tuple(category))] = table
+            all_tables.append(table)
+            result[(cycle_key, tuple(category))] = table
         
         # Combine all tables and write as partitioned dataset
         if all_tables:
@@ -90,23 +93,30 @@ class Encoder(bufr.encoders.EncoderBase):
 
     def _build_table(
         self,
-        container: bufr.DataContainer,
+        container: Union[bufr.DataContainer, dict],
         category: list,
-        dims: bufr.encoders.EncoderDimensions,
+        dims: Union[bufr.encoders.EncoderDimensions, None],
         cycle: str = None,
         date: str = None,
     ) -> pa.Table:
         """Create a :class:`pyarrow.Table` for the given category."""
         data_dict = {}
         fields = []
+        if isinstance(container, dict):
+            is_bufr_container = False
+        else:
+            is_bufr_container = True
 
         # File level metadata
-        file_meta = {
-            k.encode(): str(v).encode() for k, v in self.description.get_globals().items()
-        }
+        if is_bufr_container:   
+            file_meta = {
+                k.encode(): str(v).encode() for k, v in self.description.get_globals().items()
+            }
+        else:
+            file_meta = {}
 
         # Get number of rows for partition columns
-        timestamp = container.get("variables/timestamp", category)
+        timestamp = container.get("variables/timestamp", category) if is_bufr_container else container["timestamp"]
         num_rows = len(timestamp)
         # print(f"Building table for category {category} with {num_rows} rows")
 
@@ -126,20 +136,26 @@ class Encoder(bufr.encoders.EncoderBase):
             field_names.add("cycle")
 
         # Primary time dimension
-        timestamp = container.get("variables/timestamp", category)
+        timestamp = container.get("variables/timestamp", category) if is_bufr_container else container["timestamp"]
         data_dict["time"] = pa.array(timestamp)
         fields.append(pa.field("time", data_dict["time"].type))
         field_names.add("time")
 
-        dim_label_map = {d.name().lower(): d.labels for d in dims.dims()}
+        if is_bufr_container:
+            dim_label_map = {d.name().lower(): d.labels for d in dims.dims()}
+        else:
+            dim_label_map = {}
         # print(f"Dimension label map: {dim_label_map}")
 
         for var in self.description.get_variables():
-            dim_names = [n.lower() for n in dims.dim_names_for_var(var["name"])]
-            if not dim_names:
-                dim_names = ["time"]
+            if is_bufr_container:
+                dim_names = [n.lower() for n in dims.dim_names_for_var(var["name"])]
+                if not dim_names:
+                    dim_names = ["time"]
+                else:
+                    dim_names[0] = "time"
             else:
-                dim_names[0] = "time"
+                dim_names = ["time"]
 
             _, var_name = self._split_source_str(var["name"])
 
@@ -147,10 +163,10 @@ class Encoder(bufr.encoders.EncoderBase):
                 continue
 
             source_key = var["source"].split("/")[-1]
-            if source_key not in container.list():
+            if source_key not in container.list() if is_bufr_container else source_key not in container:
                 raise ValueError(f"Variable {var['source']} not found in the container")
 
-            var_data = container.get(source_key, category)
+            var_data = container.get(source_key, category) if is_bufr_container else container[source_key]
             # print(f"Processing variable '{var_name}' with shape {var_data.shape} and dimensions {dim_names}")
             meta = self._field_metadata(var)
 
@@ -161,7 +177,7 @@ class Encoder(bufr.encoders.EncoderBase):
                     fields.append(pa.field(var_name, array.type, metadata=meta))
                     field_names.add(var_name)
             elif len(var_data.shape) == 2:
-                labels = dim_label_map[dim_names[1]]
+                labels = dim_label_map[dim_names[1]] if is_bufr_container else container.get("sensor_chan")
                 #labels = [f"{i:02d}" for i in range(1, var_data.shape[1] + 1)]  #TODO: Use actual labels if available
                 for i in range(var_data.shape[1]):
                     col_name = f"{var_name}_{dim_names[1]}_{labels[i]}"
