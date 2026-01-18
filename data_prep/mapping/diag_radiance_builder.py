@@ -32,7 +32,7 @@ config_base = {
     ],
     "geo_vars": [
         "Channel_Index",
-        # "Observation_Class",
+        "Observation_Class",
         "Latitude",
         "Longitude",
         "Elevation",
@@ -78,6 +78,19 @@ class RadianceDiagObsBuilder(ObsBuilder):
     def dims_for_var(self, dims, dim_path_map):
         return [dim_path_map[d] for d in dims]
 
+    def make_obs(self, comm, input_path):
+        self.log.debug("***** Entering make_obs *****")
+        mapping_path = list(self.map_dict.values())[0]
+        # if not self.config:
+        #     self.config = load_config(mapping_path)
+            
+        data = self.netcdf_to_container(input_path, self.config)
+        if isinstance(data, dict):
+            self.log.debug(f"data keys: {list(data.keys())}")
+        else:
+            self.log.debug(f"variables in data: {data.list()}")
+        return data
+
     def read_netcdf_diag(self,file_path, obs_config) -> dict:
 
         with nc.Dataset(file_path, 'r') as ncfile:
@@ -94,7 +107,7 @@ class RadianceDiagObsBuilder(ObsBuilder):
                 if var_name in ncfile.variables:
                     data[var_name] = self._maybe_decode_char_array(ncfile.variables[var_name][:])
                     if var_name in ['Longitude']:
-                       print(f'var name: {var_name}, shape: {data[var_name].shape}, data: {data[var_name][-100:]}')
+                       self.log.debug(f'var name: {var_name}, shape: {data[var_name].shape}, data: {data[var_name][-100:]}')
                        
                 else:
                     self.log.debug(f"Warning: Variable '{var_name}' not found in NetCDF file")
@@ -156,7 +169,7 @@ class RadianceDiagObsBuilder(ObsBuilder):
                 xr_dims = ['location']
                 var_data = data[source][::nchans]
                 if source in ['Longitude']:
-                       print(f'var name: {source}, shape: {var_data.shape}, data: {var_data[-100:]}')
+                       self.log.debug(f'var name: {source}, shape: {var_data.shape}, data: {var_data[::100]}')
             elif source in self.channel_vars:
                 xr_dims = ['channel']
                 var_data = data[source]
@@ -168,7 +181,7 @@ class RadianceDiagObsBuilder(ObsBuilder):
             self.log.debug(f"  shape =, {var_data.shape}")
             self.log.debug(f"Adding variable '{name}' from source '{source}' with dims {xr_dims} -> paths {dim_paths}")
             if source in ['Latitude', 'Longitude']:
-                print(f'var name: {name}, source:{source}, shape: {var_data.shape}, data: {var_data[::100]}')
+                self.log.debug(f"var name: {name}, source:{source}, shape: {var_data.shape}, data: {var_data[::100]}")
             
             if use_bufr:
                 container.add_variable(

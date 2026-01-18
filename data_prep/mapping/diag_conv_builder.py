@@ -13,7 +13,6 @@ from datetime  import datetime, timezone
 
 from bufr.obs_builder import ObsBuilder, add_main_functions, map_path
     
-
 config_base = {
     "base_dirs": {
         "input": "/scratch5/purged/Xin.C.Jin/my_ocelot/diag",
@@ -32,6 +31,10 @@ config_base = {
       "Time",
       "timestamp",
       "Incremental_Bending_Angle",
+      "Analysis_Use_Flag",
+      "Prep_Use_Flag",
+      "Prep_QC_Mark",
+      "Setup_QC_Mark",
       "Observation",
       "u_Observation",
       "v_Observation",
@@ -65,8 +68,10 @@ class ConvDiagObsBuilder(ObsBuilder):
         #     self.config = load_config(mapping_path)
             
         data = self.netcdf_to_container(input_path, self.config)
-        self.log.debug(f"variables in data: {data.list()}")
-        
+        if isinstance(data, dict):
+            self.log.debug(f"data keys: {list(data.keys())}")
+        else:
+            self.log.debug(f"variables in data: {data.list()}")
         return data
 
     def dims_for_var(self, dims, dim_path_map):
@@ -129,8 +134,12 @@ class ConvDiagObsBuilder(ObsBuilder):
         # has_channels = nchans is not None and nchans > 0 and nobs % nchans == 0 and 'Observation' in data
 
         n_unique_obs = nobs 
-        
-        container = bufr.DataContainer()
+
+        use_bufr = False
+        if use_bufr:
+            container = bufr.BufrContainer()
+        else:
+            container = {}
 
         # channel_vars = type_config.get('channel_vars', [])
         # obs_vars = type_config.get('obs_vars', [])
@@ -150,11 +159,16 @@ class ConvDiagObsBuilder(ObsBuilder):
         
             self.log.debug(f"  shape =, {var_data.shape}")
             self.log.debug(f"Adding variable '{name}' from source '{source}' with dims {xr_dims} -> paths {dim_paths}")
-            container.add(
-                name,
-                var_data,
-                dim_paths
-            )
+
+            if use_bufr:
+                container.add_variable(
+                    name,
+                    var_data,
+                    dim_paths
+                )
+            else:    
+                container[name] = var_data 
+
         return container
 
     def _maybe_decode_char_array(self, arr):

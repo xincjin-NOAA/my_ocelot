@@ -13,6 +13,9 @@ input:
     pressure: Pressure
     height: Height
     time: Time
+    analysis_use_flag: Analysis_Use_Flag
+    prep_use_flag: Prep_Use_Flag
+    setup_qc_mark: Setup_QC_Mark
     incremental_bending_angle: Incremental_Bending_Angle
     observation: Observation
   input_src: conv_gps
@@ -86,6 +89,21 @@ encoder:
       source: incremental_bending_angle
       longName: "Incremental Bending Angle"
       units: "radian"
+
+    - name: MetaData/analysis_use_flag
+      source: analysis_use_flag
+      longName: "Analysis Use Flag"
+      units: "1"
+
+    - name: MetaData/prep_use_flag
+      source: prep_use_flag
+      longName: "Prep Use Flag"
+      units: "1"
+
+    - name: MetaData/setup_qc_mark
+      source: setup_qc_mark
+      longName: "Setup QC Mark"
+      units: "1"
 
     - name: ObsValue/observation
       source: observation

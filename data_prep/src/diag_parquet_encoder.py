@@ -53,17 +53,23 @@ class Encoder(bufr.encoders.EncoderBase):
         for cycle_key, cycle_container in container.items():
             # print(f"Processing cycle: {cycle_key}")
             if isinstance(cycle_container, dict):
-                table = self._build_table(cycle_container, [], None, cycle_key, date)
+                for category in cycle_container.keys():
+                    table = self._build_table(cycle_container[category], category, None, cycle_key, date)
+                    all_tables.append(table)
+                    if category:
+                        result[(cycle_key, tuple(category))] = table
+                    else:
+                        result[(cycle_key, )] = table
             else:
                 for category in cycle_container.all_sub_categories():
                     substitutions = {}
                     for idx, key in enumerate(cycle_container.get_category_map().keys()):
                         substitutions[key] = category[idx]
 
-                dims = self.get_encoder_dimensions(cycle_container, category)
-                table = self._build_table(cycle_container, category, dims, cycle_key, date)
-            all_tables.append(table)
-            result[(cycle_key, tuple(category))] = table
+                    dims = self.get_encoder_dimensions(cycle_container, category)
+                    table = self._build_table(cycle_container, category, dims, cycle_key, date)
+                    all_tables.append(table)
+                    result[(cycle_key, tuple(category))] = table
         
         # Combine all tables and write as partitioned dataset
         if all_tables:
@@ -155,7 +161,7 @@ class Encoder(bufr.encoders.EncoderBase):
                 else:
                     dim_names[0] = "time"
             else:
-                dim_names = ["time"]
+                dim_names = ["time", "channel"]
 
             _, var_name = self._split_source_str(var["name"])
 

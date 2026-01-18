@@ -16,6 +16,10 @@ input:
     pressure: Pressure
     height: Height
     time: Time
+    analysis_use_flag: Analysis_Use_Flag
+    prep_use_flag: Prep_Use_Flag
+    prep_qc_mark: Prep_QC_Mark
+    setup_qc_mark: Setup_QC_Mark
     observation: Observation
   input_src: conv_t
 
@@ -83,6 +87,26 @@ encoder:
       source: timestamp
       longName: "Observation Time"
       units: "seconds since 1970-01-01T00:00:00Z"
+
+    - name: MetaData/analysis_use_flag
+      source: analysis_use_flag
+      longName: "Analysis Use Flag"
+      units: "1"
+
+    - name: MetaData/prep_use_flag
+      source: prep_use_flag
+      longName: "Prep Use Flag"
+      units: "1"
+
+    - name: MetaData/prep_qc_mark
+      source: prep_qc_mark
+      longName: "Prep QC Mark"
+      units: "1"
+
+    - name: MetaData/setup_qc_mark
+      source: setup_qc_mark
+      longName: "Setup QC Mark"
+      units: "1"
 
     - name: ObsValue/observation
       source: observation

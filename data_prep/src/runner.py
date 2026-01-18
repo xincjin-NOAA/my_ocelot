@@ -225,12 +225,8 @@ class DiagRunner(Runner):
                     container = self._make_obs(comm, input_path)
                     if isinstance(container, dict):
                         if cycle not in combined_container:
-                            combined_container[cycle] = container
-                        else:
-                            for key, value in container.items():
-                                if key not in combined_container[cycle]:
-                                    raise ValueError(f"Key {key} not found in combined container for cycle {cycle}")
-                                combined_container[cycle][key].append(value)
+                            combined_container[cycle] = {}
+                        combined_container[cycle][sat_id] = container
                     else:
                         if cycle not in combined_container:
                             combined_container[cycle] = bufr.DataContainer()
