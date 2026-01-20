@@ -35,9 +35,13 @@ bufr:
 
     airTemperature:
       query: "[*/UARLV/UATMP/TMDB, */TMDB]"
+      transforms:
+        - scale: -273.15 # Convert Kelvin to deg C
 
     dewPointTemperature:
       query: "[*/UARLV/UATMP/TMDP, */TMDP]"
+      transforms:
+        - scale: -273.15 # Convert Kelvin to deg C
 
     relativeHumidity: # only applies to NC004005
       query: "*/REHU"
