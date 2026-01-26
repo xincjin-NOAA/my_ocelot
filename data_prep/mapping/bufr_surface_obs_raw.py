@@ -181,7 +181,7 @@ class RawAdpsfcBuilder(ObsBuilder):
                 'name': "specificHumidity",
                 'source': 'specificHumidity',
                 'longName': "Specific Humidity",
-                'units': "mg/kg"
+                'units': "kg/kg"
             }
         ])
 

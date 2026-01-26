@@ -93,17 +93,17 @@ encoder:
     - name: "airTemperature"
       source: variables/airTemperature
       longName: "Air Temperature at Station Level"
-      units: "deg C"
+      units: "C"
 
     - name: "seaTemperature"
       source: variables/seaTemperature
       longName: "Sea Temperature"
-      units: "deg C"
+      units: "C"
 
     - name: "dewPointTemperature"
       source: variables/dewPointTemperature
       longName: "Dew Point Temperature at Station Level"
-      units: "deg C"
+      units: "C"
 
     - name: "relativeHumidity"
       source: variables/relativeHumidity
@@ -123,7 +123,7 @@ encoder:
     - name: "height_bufr"
       source: variables/height_bufr
       longName: "Height Above Ground Level"
-      units: "meters"
+      units: "m"
 
 
 

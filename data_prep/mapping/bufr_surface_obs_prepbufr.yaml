@@ -34,6 +34,9 @@ bufr:
 
     specificHumidity:
       query: "*/Q___INFO/Q__EVENT/QOB"
+      type: float
+      transforms:
+        - scale: 0.000001    # convert g/kg to kg/kg
 
     # Quality Markers
     airTemperatureQuality:
