@@ -29,6 +29,9 @@ class RawRadiosondeBuilder(ObsBuilder):
 
     # Override
     def make_obs(self, comm, input_dict) -> bufr.DataContainer:
+        if PrepbufrKey not in input_dict or LowResDumpKey not in input_dict:
+            return bufr.DataContainer()
+
         prep_container = bufr.Parser(input_dict[PrepbufrKey], self.map_dict[PrepbufrKey]).parse(comm)
         prep_container.apply_mask(~prep_container.get('launchCycleTime').mask)
         prep_container.apply_mask(~prep_container.get('driftLatitude').mask)
@@ -120,14 +123,16 @@ class RawRadiosondeBuilder(ObsBuilder):
         for var in container.list():
             data = container.get(var)
             path = container.get_paths(var)
-            matched_data = np.array([data[dump_idx] for dump_idx, prep_idx, flight_idx in matching_idxs])
+            idxs = np.array([dump_idx for dump_idx, prep_idx, flight_idx in matching_idxs])
+            matched_data = data[idxs]
             new_container.add(var, matched_data, path)
 
         # Add the prepbufr data to the new container
         for var in ['driftTime',
                     'driftLatitude',
                     'driftLongitude',
-                    'height',
+                    'height_prepbufr',
+                    'stationElevation',
                     'airTemperatureQuality',
                     'specificHumidityQuality',
                     'dewPointTemperatureQuality',
@@ -137,7 +142,9 @@ class RawRadiosondeBuilder(ObsBuilder):
 
             data = prep_container.get(var)
             path = prep_container.get_paths(var)
-            matched_data = np.array([data[prep_idx] for dump_idx, prep_idx, flight_idx in matching_idxs])
+            idxs = np.array([prep_idx for dump_idx, prep_idx, flight_idx in matching_idxs])
+            matched_data = data[idxs]
+
             if matched_data.dtype == np.dtype('float64'):
                 matched_data = matched_data.astype('float32')
             new_container.add(var, matched_data, path)
@@ -174,9 +181,15 @@ class RawRadiosondeBuilder(ObsBuilder):
                 'units': "degree_east"
             },
             {
-                'name': "height",
-                'source': 'height',
+                'name': "height_prepbufr",
+                'source': 'height_prepbufr',
                 'longName': "Height",
+                'units': "meters"
+            },
+            {
+                'name': "stationElevation",
+                'source': 'stationElevation',
+                'longName': "Station Elevation",
                 'units': "meters"
             },
             {

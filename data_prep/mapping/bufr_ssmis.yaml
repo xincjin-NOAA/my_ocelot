@@ -45,7 +45,7 @@ bufr:
 
 encoder:
   dimensions:
-    - name: Channel
+    - name: ch
       source: variables/sensorChannelNumber
       path: "*/SSMISCHN"
 
@@ -67,18 +67,6 @@ encoder:
       longName: "Longitude"
       units: "degree_east"
 
-    - name: "latitude1"
-      source: variables/latitude1
-      longName: "Latitude"
-      units: "degree_north"
-      range: [ -90, 90 ]
-
-    - name: "latitude2"
-      source: variables/latitude2
-      longName: "Latitude"
-      units: "degree_north"
-      range: [ -90, 90 ]
-
     - name: "satelliteIdentifier"
       source: variables/satelliteId
       longName: "Satellite Identifier"
@@ -86,15 +74,6 @@ encoder:
     - name: "sensorScanPosition"
       source: variables/fieldOfViewNumber
       longName: "Field of View Number"
-
-    - name: "sensorChannelNumber"
-      source: variables/sensorChannelNumber
-      longName: "Sensor Channel Number"
-
-    - name: "sensorViewAngle"
-      source: variables/sensorScanAngle
-      longName: "Sensor View Angle"
-      units: "degree"
 
     - name: "earthSurfaceType"
       source: variables/surfaceFlag
@@ -109,7 +88,6 @@ encoder:
       longName: "Scan Line Number"
 
     # ObsValue
-    # Remapped Brightness Temperature
     - name: "bt"
       source: variables/brightnessTemperature
       longName: "Brightness Temperature"
