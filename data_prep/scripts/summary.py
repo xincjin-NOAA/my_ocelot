@@ -39,13 +39,12 @@ def summarize_zarr(path: str, max_obs: int) -> str:
         else:
             arr = root[var_name][:max_obs]
 
-        #print('NICKE ', var_name, root[var_name].attrs['units'])
+        if "units" in root[var_name].attrs.keys(): 
+            units = str(root[var_name].attrs['units'])
+        else:
+            units = str("")
+            print(f"{str(root[var_name])} has no attribute 'units'. Units will be blank")
 
-        #print(var_name)
-        #print(root[var_name].attrs.keys())
-        units = str(root[var_name].attrs['units'])
-        #units = str("1")
-        #print(units)
 
         if arr.dtype.kind in {"U", "S", "O"}:
             missing_strings = {"", None}
