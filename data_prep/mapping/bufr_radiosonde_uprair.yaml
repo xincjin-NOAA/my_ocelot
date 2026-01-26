@@ -40,15 +40,15 @@ bufr:
     airTemperature:
       query: "*/UARLVB/UATMP/TMDB"
       transforms:
-        - scale: -273.15 # Convert Kelvin to deg C
+        - offset: -273.15 # Convert Kelvin to deg C
 
     dewPointTemperature:
       query: "*/UARLVB/UATMP/TMDP"
       transforms:
-        - scale: -273.15 # Convert Kelvin to deg C
+        - offset: -273.15 # Convert Kelvin to deg C
 
-    relativeHumidity: # only applies to NC004005
-      query: "*/REHU"
+          #relativeHumidity: # only applies to NC004005
+          #   query: "*/REHU"
 
     windDirection:
       query: "*/UARLVB/UAWND/WDIR"
@@ -70,20 +70,20 @@ encoder:
     - name: "ObsValue/airTemperature"
       source: airTemperature
       longName: "Air Temperature"
-      units: "deg C"
-      range: [-100, 100]
+      units: "C"
+        #range: [-100, 100]
 
     - name: "ObsValue/dewPointTemperature"
       source: dewPointTemperature
       longName: "Dew Point Temperature"
-      units: "deg C"
-      range: [ -100, 100 ]
+      units: "C"
+        #range: [ -100, 100 ]
 
-    - name: "ObsValue/relativeHumidity"
-      source: relativeHumidity
-      longName: "Specific Humidity"
-      units: "mg/kg"
-      range: [0, 50000]
+        #- name: "ObsValue/relativeHumidity"
+        # source: relativeHumidity
+        #longName: "Relative Humidity"
+        #units: "%"
+        #range: [0, 50000]
 
     - name: "ObsValue/windDirection"
       source: windDirection
