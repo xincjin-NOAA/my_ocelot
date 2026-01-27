@@ -39,12 +39,11 @@ def summarize_zarr(path: str, max_obs: int) -> str:
         else:
             arr = root[var_name][:max_obs]
 
-        if "units" in root[var_name].attrs.keys(): 
+        if "units" in root[var_name].attrs.keys():
             units = str(root[var_name].attrs['units'])
         else:
             units = str("")
             print(f"{str(root[var_name])} has no attribute 'units'. Units will be blank")
-
 
         if arr.dtype.kind in {"U", "S", "O"}:
             missing_strings = {"", None}
@@ -57,7 +56,7 @@ def summarize_zarr(path: str, max_obs: int) -> str:
             good_mask &= ~np.isnan(arr)
         good = arr[good_mask]
         good_count = int(good.size)
-        bad_count = total - good_count 
+        bad_count = total - good_count
         if good_count:
             mn = np.min(good)
             mean = np.mean(good)
