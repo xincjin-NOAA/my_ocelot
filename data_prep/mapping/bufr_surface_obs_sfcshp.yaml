@@ -105,6 +105,11 @@ bufr:
         longName: "Air Temperature at Station Level"
         units: "C"
 
+      - name: "airTemperature"
+        source: variables/airTemperature
+        longName: "Air Temperature at Station Level"
+        units: "Celsius"
+
       - name: "relativeHumidity"
         source: variables/relativeHumidity
         longName: "Relative Humidity at Station Level"

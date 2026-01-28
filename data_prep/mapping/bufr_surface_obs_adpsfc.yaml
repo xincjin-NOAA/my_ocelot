@@ -100,6 +100,11 @@ encoder:
       longName: "Sea Temperature"
       units: "C"
 
+    - name: "seaTemperature"
+      source: variables/seaTemperature
+      longName: "Sea Temperature"
+      units: "Celsius"
+
     - name: "dewPointTemperature"
       source: variables/dewPointTemperature
       longName: "Dew Point Temperature at Station Level"
