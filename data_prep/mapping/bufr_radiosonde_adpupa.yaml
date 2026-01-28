@@ -43,8 +43,8 @@ bufr:
       transforms:
         - offset: -273.15 # Convert Kelvin to deg C
 
-          #relativeHumidity: # only applies to NC004005
-          #query: "*/REHU"
+#    relativeHumidity: # only applies to NC004005
+#      query: "*/REHU"
 
     windDirection:
       query: "[*/UARLV/UAWND/WDIR, */WDIR]"
@@ -69,19 +69,17 @@ encoder:
       source: airTemperature
       longName: "Air Temperature"
       units: "C"
-        #range: [-100, 100]
 
     - name: "dewPointTemperature"
       source: dewPointTemperature
       longName: "Dew Point Temperature"
       units: "C"
-        #range: [ -100, 100 ]
 
-        #    - name: "relativeHumidity"
-           #source: relativeHumidity
-           #longName: "Relative Humidity"
-           #units: "%"
-        #range: [0, 50000]
+#    - name: "relativeHumidity"
+#      source: relativeHumidity
+#      longName: "Relative Humidity"
+#      units: "%"
+#      #range: [0, 50000]
 
     - name: "windDirection"
       source: windDirection

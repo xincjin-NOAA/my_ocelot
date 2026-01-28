@@ -96,29 +96,23 @@ encoder:
     - name: "airTemperatureQuality"
       source: variables/airTemperatureQuality
       longName: "Air Temperature Quality Marker"
-        #units: "quality_marker"
 
     - name: "specificHumidityQuality"
       source: variables/specificHumidityQuality
       longName: "Specific Humidity Quality Marker"
-        #units: "quality_marker"
 
     - name: "dewPointTemperatureQuality"
       source: variables/dewPointTemperatureQuality
       longName: "Dew Point Temperature Quality Marker"
-        #units: "quality_marker"
 
     - name: "windQuality"
       source: variables/windQuality
       longName: "Wind Quality Marker"
-        #units: "quality_marker"
 
     - name: "airPressureQuality"
       source: variables/airPressureQuality
       longName: "Air Pressure Quality Marker"
-        #units: "quality_marker"
 
     - name: "heightQuality"
       source: variables/heightQuality
       longName: "Height Quality Marker"
-        #units: "quality_marker"

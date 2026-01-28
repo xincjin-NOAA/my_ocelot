@@ -203,37 +203,31 @@ class RawRadiosondeBuilder(ObsBuilder):
                 'name': "airTemperatureQuality",
                 'source': 'airTemperatureQuality',
                 'longName': "Air Temperature Quality Marker",
-                #'units': "quality_marker"
             },
             {
                 'name': "specificHumidityQuality",
                 'source': 'specificHumidityQuality',
                 'longName': "Specific Humidity Quality Marker",
-                #'units': "quality_marker"
             },
             {
                 'name': "dewPointTemperatureQuality",
                 'source': 'dewPointTemperatureQuality',
                 'longName': "Dew Point Temperature Quality Marker",
-                #'units': "quality_marker"
             },
             {
                 'name': "windQuality",
                 'source': 'windQuality',
                 'longName': "Wind Quality Marker",
-                #'units': "quality_marker"
             },
             {
                 'name': "airPressureQuality",
                 'source': 'airPressureQuality',
                 'longName': "Air Pressure Quality Marker",
-                #'units': "quality_marker"
             },
             {
                 'name': "heightQuality",
                 'source': 'heightQuality',
                 'longName': "Height Quality Marker",
-                #'units': "quality_marker"
             },
             {
                 'name': "flightId",
@@ -243,7 +237,7 @@ class RawRadiosondeBuilder(ObsBuilder):
             }
         ])
 
-        # description.add_dimension('event', ['*', '*/EVENT'])
+#        description.add_dimension('event', ['*', '*/EVENT'])
 
         return description
 
