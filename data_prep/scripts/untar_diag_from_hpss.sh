@@ -43,9 +43,22 @@ if [[ $# -gt 0 ]]; then
     echo "Extracting ${#months[@]} month(s): ${months[*]}"
 else
     echo "Listing archives in ${HPSS_DIR} ..."
+    echo "DEBUG: All files in directory (raw hsi ls output):"
+    echo "---"
+    hsi "ls -1 ${HPSS_DIR}/" 2>&1 || true
+    echo "---"
     mapfile -t months < <(list_months_on_hpss)
     if [[ ${#months[@]} -eq 0 ]]; then
         echo "ERROR: No diag_gdas_YYYYMM.tar archives found in ${HPSS_DIR}"
+        echo ""
+        echo "DEBUG: Raw output from hsi ls (all files in directory):"
+        echo "---"
+        hsi "ls -1 ${HPSS_DIR}/" 2>&1 || true
+        echo "---"
+        echo ""
+        echo "DEBUG: Raw output (one line at a time, hex for non-printable):"
+        hsi "ls -1 ${HPSS_DIR}/" 2>&1 | od -c | head -100
+        echo "---"
         exit 1
     fi
     echo "Found ${#months[@]} month(s): ${months[*]}"
@@ -54,6 +67,11 @@ fi
 echo "Destination: ${DEST_DIR}"
 echo "Logs: ${LOG_DIR}/htar_xvf_*.log"
 echo "Parallel jobs: ${MAX_JOBS}"
+echo ""
+echo "Files to extract (for checking):"
+for m in "${months[@]}"; do
+    echo "  ${HPSS_DIR}/diag_gdas_${m}.tar"
+done
 echo "---------------------------"
 
 printf '%s\n' "${months[@]}" | xargs -P "${MAX_JOBS}" -I {} bash -c 'htar_extract_month "$@"' _ {}
