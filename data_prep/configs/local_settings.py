@@ -16,7 +16,7 @@ DATETIME_DIR_FORMAT_DIAG = '%Y%m%d'
 # (example: '/install_dir/src/spoc/tank/mapping')
 MAPPING_FILE_DIR = '/scratch3/NCEPDEV/da/Xin.C.Jin/git/my_ocelot/data_prep/mapping'
 
-OUTPUT_PATH = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/global/dev'
+OUTPUT_PATH = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/bufr_global'
 
 OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_global/dev'
 
