@@ -11,6 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HPSS_DIR="/NCEPDEV/emc-da/2year/Xin.C.Jin/my_ocelot/diag"
 DEST_DIR="${SCRIPT_DIR}/../diag"
 LOG_DIR="${SCRIPT_DIR}/../logs"
+MAX_JOBS=2
 
 mkdir -p "${DEST_DIR}"
 mkdir -p "${LOG_DIR}"
@@ -52,10 +53,9 @@ fi
 
 echo "Destination: ${DEST_DIR}"
 echo "Logs: ${LOG_DIR}/htar_xvf_*.log"
+echo "Parallel jobs: ${MAX_JOBS}"
 echo "---------------------------"
 
-for m in "${months[@]}"; do
-    htar_extract_month "$m"
-done
+printf '%s\n' "${months[@]}" | xargs -P "${MAX_JOBS}" -I {} bash -c 'htar_extract_month "$@"' _ {}
 
 echo "All done."
