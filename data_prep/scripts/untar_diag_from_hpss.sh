@@ -20,8 +20,8 @@ mkdir -p "${LOG_DIR}"
 DEST_DIR="$(cd "${DEST_DIR}" && pwd)"
 
 list_months_on_hpss() {
-    # List HPSS dir; match diag_gdas_YYYYMM.tar (output format may vary by site)
-    hsi "ls -1 ${HPSS_DIR}/" 2>/dev/null | grep -oE 'diag_gdas_[0-9]{6}\.tar' | sed 's/diag_gdas_\([0-9]*\)\.tar/\1/' | sort -u
+    # hsi outputs full paths to stderr; match diag_gdas_YYYYMM.tar (exclude .idx)
+    hsi "ls -1 ${HPSS_DIR}/" 2>&1 | grep -E 'diag_gdas_[0-9]{6}\.tar$' | sed 's/.*diag_gdas_\([0-9]\{6\}\)\.tar$/\1/' | sort -u
 }
 
 htar_extract_month() {
