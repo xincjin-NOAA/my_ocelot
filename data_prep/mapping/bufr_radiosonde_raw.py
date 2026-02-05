@@ -200,6 +200,12 @@ class RawRadiosondeBuilder(ObsBuilder):
                 'units': "kg/kg"
             },
             {
+                'name': "stationElevation",
+                'source': 'stationElevation',
+                'longName': "Station Elevation",
+                'units': "meters"
+            },
+            {
                 'name': "airTemperatureQuality",
                 'source': 'airTemperatureQuality',
                 'longName': "Air Temperature Quality Marker",
