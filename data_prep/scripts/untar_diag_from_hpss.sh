@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HPSS_DIR="/NCEPDEV/emc-da/2year/Xin.C.Jin/my_ocelot/diag"
 DEST_DIR="${SCRIPT_DIR}/../diag"
 LOG_DIR="${SCRIPT_DIR}/../logs"
-MAX_JOBS=2
+MAX_JOBS=6
 
 mkdir -p "${DEST_DIR}"
 mkdir -p "${LOG_DIR}"
