@@ -315,3 +315,27 @@ data types:
     batch_days: 15
     mapping: diag_sst.py
     directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_radiosonde_t
+    type: diag
+    file_obs_type: conv_t
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_radiosonde_t.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_radiosonde_uv
+    type: diag
+    file_obs_type: conv_uv
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_radiosonde_uv.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_radiosonde_q
+    type: diag
+    file_obs_type: conv_q
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_radiosonde_q.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
