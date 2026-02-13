@@ -39,7 +39,7 @@ bufr:
 
 encoder:
   dimensions:
-    - name: Channel
+    - name: ch
       source: variables/sensorChannelNumber
       path: "*/SSMISCHN"
 
@@ -68,15 +68,6 @@ encoder:
     - name: "sensorScanPosition"
       source: variables/fieldOfViewNumber
       longName: "Field of View Number"
-
-    - name: "sensorChannelNumber"
-      source: variables/sensorChannelNumber
-      longName: "Sensor Channel Number"
-
-    - name: "sensorViewAngle"
-      source: variables/sensorScanAngle
-      longName: "Sensor View Angle"
-      units: "degree"
 
     - name: "earthSurfaceType"
       source: variables/surfaceFlag

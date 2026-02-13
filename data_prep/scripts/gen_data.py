@@ -10,7 +10,7 @@ sys.path.append(os.path.realpath(os.path.join(base_path, '..', 'mapping')))
 
 def get_reader_path(data_type: str, reader_type: str = 'bufr') -> str:
     """Return path to the reader script.
-    
+
     Parameters
     ----------
     data_type : str
@@ -125,14 +125,12 @@ def _make_serial_cmd(reader_path: str,
     return cmd
 
 
-
-
 def _split_datetime_range(start: datetime, end: datetime, num_days: int) -> list:
     """
     Split the datetime range into chunks of num_days days.
     """
     delta = end - start
-    num_chunks = delta.days // num_days + 1
+    num_chunks = (delta.days + num_days - 1) // num_days
 
     ranges = []
     for i in range(num_chunks):
@@ -213,8 +211,6 @@ def _serial_gen(reader_path: str,
     os.system(cmd)
 
 
-
-
 if __name__ == "__main__":
     from config import Config
     config = Config()
@@ -241,11 +237,11 @@ if __name__ == "__main__":
 
     def call_generator(gen_type):
         type_config = config.get_data_type(gen_type)
-        
+
         # Determine which reader to use
         reader_type = 'netcdf' if args.netcdf else 'bufr'
         reader_path = get_reader_path(type_config.type, reader_type)
-        
+
         # Use the same logic for both readers (they now have the same CLI interface)
         if args.batch:
             _batch_gen(reader_path,

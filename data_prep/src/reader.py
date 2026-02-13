@@ -291,7 +291,7 @@ def _append_data_for_day(comm,
 
         # Format date string for partitioning (YYYY-MM-DD)
         date_str = date.strftime("%Y-%m-%d")
-        
+
         if output_type == 'zarr':
             ZarrEncoder(description).encode(container, f'{output_path}', append=True)
         elif output_type == 'parquet':

@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.realpath('..'))
 import config  # noqa: E402
 import settings  # noqa: E402
 
-from netcdf_utils import load_config 
+from netcdf_utils import load_config
 
 class Parameters:
     def __init__(self):
@@ -217,7 +217,7 @@ class DiagRunner(Runner):
                         "atmos",
                         file_name
                     )
-                    
+
                     if not os.path.exists(input_path):
                         print(f"File not found: {input_path}, skipping...")
                         continue
