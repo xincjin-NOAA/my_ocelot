@@ -133,6 +133,7 @@ class RawRadiosondeBuilder(ObsBuilder):
                     'driftLongitude',
                     'height_prepbufr',
                     'stationElevation',
+                    'specificHumidity',
                     'airTemperatureQuality',
                     'specificHumidityQuality',
                     'dewPointTemperatureQuality',
@@ -184,7 +185,19 @@ class RawRadiosondeBuilder(ObsBuilder):
                 'name': "height_prepbufr",
                 'source': 'height_prepbufr',
                 'longName': "Height",
-                'units': "meters"
+                'units': "m"
+            },
+            {
+                'name': "stationElevation",
+                'source': 'stationElevation',
+                'longName': "Station Elevation",
+                'units': "m"
+            },
+            {
+                'name': "specificHumidity",
+                'source': 'specificHumidity',
+                'longName': "Specific Humidity",
+                'units': "kg/kg"
             },
             {
                 'name': "stationElevation",
@@ -236,7 +249,7 @@ class RawRadiosondeBuilder(ObsBuilder):
             }
         ])
 
-        # description.add_dimension('event', ['*', '*/EVENT'])
+#        description.add_dimension('event', ['*', '*/EVENT'])
 
         return description
 

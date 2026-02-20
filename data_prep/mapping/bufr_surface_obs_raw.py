@@ -27,6 +27,11 @@ class RawAdpsfcBuilder(ObsBuilder):
 
     # Override
     def make_obs(self, comm, input_dict) -> bufr.DataContainer:
+        if PrepbufrKey not in input_dict or \
+           AdpsfcKey not in input_dict or \
+           SfcshpKey not in input_dict:
+            return bufr.DataContainer()
+
         prepbufr_container = bufr.Parser(input_dict[PrepbufrKey], self.map_dict[PrepbufrKey]).parse(comm)
         adpsfc_container = bufr.Parser(input_dict[AdpsfcKey], self.map_dict[AdpsfcKey]).parse(comm)
         sfcshp_container = bufr.Parser(input_dict[SfcshpKey], self.map_dict[SfcshpKey]).parse(comm)
@@ -79,10 +84,10 @@ class RawAdpsfcBuilder(ObsBuilder):
         for var in ['eastwardWind',
                     'northwardWind',
                     'specificHumidity',
-                    'height_pb',
-                    'stationElevation_pb',
-                    'airPressure_pb',
-                    'pressureMeanSeaLevel_pb',
+                    'height_prepbufr',
+                    'stationElevation_prepbufr',
+                    'airPressure_prepbufr',
+                    'pressureMeanSeaLevel_prepbufr',
                     'airTemperatureQuality',
                     'specificHumidityQuality',
                     'airPressureQuality',
@@ -104,37 +109,55 @@ class RawAdpsfcBuilder(ObsBuilder):
                 'name': "airTemperatureQuality",
                 'source': 'airTemperatureQuality',
                 'longName': "Air Temperature Quality Marker",
-                'units': "quality_marker"
             },
             {
                 'name': "specificHumidityQuality",
                 'source': 'specificHumidityQuality',
                 'longName': "Specific Humidity Quality Marker",
-                'units': "quality_marker"
             },
             {
                 'name': "dewPointTemperatureQuality",
                 'source': 'dewPointTemperatureQuality',
                 'longName': "Dew Point Temperature Quality Marker",
-                'units': "quality_marker"
             },
             {
                 'name': "airPressureQuality",
                 'source': 'airPressureQuality',
                 'longName': "Air Pressure Quality Marker",
-                'units': "quality_marker"
             },
             {
                 'name': "heightQuality",
                 'source': 'heightQuality',
                 'longName': "Height Quality Marker",
-                'units': "quality_marker"
             },
             {
                 'name': "windQuality",
                 'source': 'windQuality',
                 'longName': "Wind Quality Marker",
-                'units': "quality_marker"
+            },
+            {
+                'name': 'airPressure_prepbufr',
+                'source': 'airPressure_prepbufr',
+                'longName': 'airPressure_prepbufr',
+                'units': 'hPa',
+            },
+            {
+                'name': 'pressureMeanSeaLevel_prepbufr',
+                'source': 'pressureMeanSeaLevel_prepbufr',
+                'longName': 'pressureMeanSeaLevel_prepbufr',
+                'units': 'hPa',
+            },
+            {
+                'name': 'height_prepbufr',
+                'source': 'height_prepbufr',
+                'longName': 'height_prepbufr',
+                'units': 'm',
+            },
+            {
+                'name': 'stationElevation_prepbufr',
+                'source': 'stationElevation_prepbufr',
+                'longName': 'stationElevation_prepbufr',
+                'units': 'm',
             },
             {
                 'name': 'airPressure_pb',
@@ -176,7 +199,7 @@ class RawAdpsfcBuilder(ObsBuilder):
                 'name': "specificHumidity",
                 'source': 'specificHumidity',
                 'longName': "Specific Humidity",
-                'units': "mg/kg"
+                'units': "kg/kg"
             }
         ])
 

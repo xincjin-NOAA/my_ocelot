@@ -19,32 +19,21 @@ bufr:
     satelliteId:
       query: "*/SAID"
 
-    fieldOfViewNumber:
-      query: "*/FOVN"
-
     satelliteZenithAngle:
       query: "*/SAZA"
 
     solarZenithAngle:
       query: "*/SOZA"
 
-    cloudMask:
-      query: "*/CLAVR"
-
-    channelNumber:
-      query: "*/AVCSEQ/INCN"
-
-    albedo:
-      query: "*/AVCSEQ/ALBD"
-
-    brightnessTemperature:
-      query: "*/AVCSEQ/TMBR"
+    bt_clear:
+      query: "*/RPSEQ7{1-11}/TMBRST"
 
 encoder:
   dimensions:
     - name: ch
-      path: '*/AVCSEQ'
-      source: variables/channelNumber
+      paths: 
+        - "*/RPSEQ7{1-11}"
+        - "*/RPSEQ10{1-11}"
 
   variables:
     # MetaData
@@ -69,33 +58,22 @@ encoder:
       source: variables/satelliteId
       longName: "Satellite Identifier"
 
-    - name: "fieldOfViewNumber"
-      source: variables/fieldOfViewNumber
-      longName: "Field of View Number"
-      units: ""
+    - name: "solarZenithAngle"
+      source: variables/solarZenithAngle
+      longName: "Satellite Identifier"
 
     - name: "satelliteZenithAngle"
       source: variables/satelliteZenithAngle
       longName: "Satellite Zenith Angle"
       units: "degree"
 
-    - name: "solarZenithAngle"
-      source: variables/solarZenithAngle
-      longName: "Solar Zenith Angle"
-      units: "degree"
+    - name: "bt_all"
+      source: variables/bt_all
+      longName: "Brightness Temperature"
+      units: "K"
 
-    - name: "cloudMask"
-      source: variables/cloudMask
-      longName: "Cloud Mask"
-      units: ""
-
-    - name: "albedo"
-      source: variables/albedo
-      longName: "Albedo"
-      units: "%"
-
-    - name: "brightnessTemperature"
-      source: variables/brightnessTemperature
+    - name: "bt_clear"
+      source: variables/bt_clear
       longName: "Brightness Temperature"
       units: "K"
 

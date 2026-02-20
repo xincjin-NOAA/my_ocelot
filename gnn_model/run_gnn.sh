@@ -9,7 +9,7 @@
 #SBATCH --ntasks-per-node=2
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=0
-#SBATCH -t 08:00:00
+#SBATCH -t 10:30:00
 #SBATCH --output=gnn_train_%j.out
 #SBATCH --error=gnn_train_%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
@@ -56,63 +56,26 @@ echo "SLURM Node List: $SLURM_NODELIST"
 echo "Visible GPUs on this node:"
 nvidia-smi
 
-# ==========================================================
-# HOW TO LAUNCH TRAINING (CHOOSE EXACTLY ONE OPTION BELOW)
-# ==========================================================
+# ============================================================================
+# MESH CONFIGURATION: Hierarchical vs Fixed
+# ============================================================================
+# ARCHITECTURE NOTES:
+# • Fixed mesh = GraphCast's multiscale merged mesh (single node set + multiscale edges)
+# • Hierarchical = U-Net-style latent hierarchy (L0=40962, L1=10242, L2=2562, L3=642 nodes)
+#   - Only L0 interfaces with observations/predictions
+#   - L1-L3 are latent levels with cross-scale attention
+#   - L1→L0 conditioning provides gradient supervision to coarse level
+# ============================================================================
 
-# ----------------------------------------------------------
-# (A) CONTINUE TRAINING ON THE SAME YEAR / SAME ZARR
-# ----------------------------------------------------------
-# Use these only when you are training on the SAME dataset
-# and want to continue training from the same checkpoint.
-# These restore full trainer state (epoch, optimizer, windows).
-#
-# --- RANDOM SAMPLING CONTINUATION ---
-srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py \
-    --resume_from_latest \
-    --sampling_mode random \
-    --window_mode random
+# Launch training (env is propagated to ranks)
+# srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py
 
-# --- SEQUENTIAL SAMPLING CONTINUATION ---
-# srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py \
-#     --resume_from_latest \
-#     --sampling_mode sequential \
-#     --window_mode sequential
-#
-# NOTE:
-# Do NOT use these if you are switching to another year.
-# They will restore old windows (e.g., 2024 windows) and fail.
+# HIERARCHICAL MODE
+# Resume training from the latest checkpoint in hierarchical mode
+# srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py --mesh_type hierarchical --mesh_levels 4 --resume_from_latest
 
+# FIXED MODE
+srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py --mesh_type fixed --resume_from_latest
 
-# ----------------------------------------------------------
-# (B) START TRAINING ON A NEW YEAR / NEW ZARR (WARM START)
-# ----------------------------------------------------------
-# Use these when switching to a different dataset (e.g. 2024 → 2023).
-# Loads model weights ONLY; trainer state and windows are NOT restored.
-# This avoids the "restored window is outside dataset" crash.
-#
-# --- RANDOM SAMPLING WARM START (RECOMMENDED FOR MULTI-YEAR) ---
-# srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py \
-#     --init_from_ckpt checkpoints/last.ckpt \
-#     --sampling_mode random \
-#     --window_mode random
-#
-# --- SEQUENTIAL SAMPLING WARM START ---
-# srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py \
-#     --init_from_ckpt checkpoints/last.ckpt \
-#     --sampling_mode sequential \
-#     --window_mode sequential
-
-
-# ----------------------------------------------------------
-# IMPORTANT RULES:
-# ----------------------------------------------------------
-# - You MUST choose exactly ONE of:
-#       --resume_from_latest   (continue same year)
-#       --init_from_ckpt       (start new year)
-#
-# - Never use both at the same time.
-# - For NEW YEAR training, always use --init_from_ckpt.
-# - For SAME YEAR continuation, always use --resume_from_latest.
-# ==========================================================
-
+# Resume from specific checkpoint
+# srun --export=ALL --kill-on-bad-exit=1 --cpu-bind=cores python train_gnn.py --mesh_type hierarchical --resume_from_checkpoint checkpoints/last.ckpt
