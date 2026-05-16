@@ -10,8 +10,7 @@
 
 
 
-source /scratch3/NCEPDEV/da/Xin.C.Jin/my_projects/ocelot/data/env.sh
-source /scratch3/NCEPDEV/da/Xin.C.Jin/my_projects/ocelot/data/venv/bin/activate
+source /scratch3/NCEPDEV/da/Xin.C.Jin/git/my_ocelot/data_prep/scripts/env.sh
 export LOG_LEVEL=INFO
 #srun -n 24 python gen_data.py 2024-01-01 2024-12-31 $1 zarr
 #python gen_data.py 2024-01-01 2024-04-30 raw_radiosonde zarr
@@ -20,7 +19,7 @@ export LOG_LEVEL=INFO
 #python gen_data.py -p 2024-01-01 2024-12-31 ssmis  cycle_parquet
 #python gen_data.py -p 2024-01-01 2024-12-31 avhrr  cycle_parquet
 #python gen_data.py 2024-01-01 2024-12-31 raw_surface_obs cycle_parquet
-python gen_data.py 2024-01-01 2024-12-31 raw_radiosonde cycle_parquet
+python gen_data.py 2024-11-04 2024-12-31 raw_radiosonde cycle_parquet
 #python gen_data.py  -b  --slurm_account da-cpu 2024-01-01 2024-04-30 amsua cycle_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_atms diag_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_amsua diag_parquet
