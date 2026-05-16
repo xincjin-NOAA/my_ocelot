@@ -248,6 +248,23 @@ def create_yearly_data(start_date: datetime,
         date += day
 
 
+def _apply_region_mask(container) -> bool:
+    latitudes = container.get('latitude')
+    longitudes = container.get('longitude')
+
+    mask = np.array([True] * len(latitudes))
+    mask[latitudes < settings.LAT_RANGE[0]] = False
+    mask[latitudes > settings.LAT_RANGE[1]] = False
+    mask[longitudes < settings.LON_RANGE[0]] = False
+    mask[longitudes > settings.LON_RANGE[1]] = False
+
+    if not np.any(mask):
+        return False
+
+    container.apply_mask(mask)
+    return True
+
+
 def _append_data_for_day(comm,
                          date: datetime,
                          data_type: str,
@@ -275,19 +292,16 @@ def _append_data_for_day(comm,
         # Filter data based on the specified latitude and longitude ranges
         # if the settings have been defined
         if hasattr(settings, 'LAT_RANGE') and hasattr(settings, 'LON_RANGE'):
-            latitudes = container.get('latitude')
-            longitudes = container.get('longitude')
+            if seperate:
+                for key in list(container.keys()):
+                    if not _apply_region_mask(container[key]):
+                        del container[key]
 
-            mask = np.array([True] * len(latitudes))
-            mask[latitudes < settings.LAT_RANGE[0]] = False
-            mask[latitudes > settings.LAT_RANGE[1]] = False
-            mask[longitudes < settings.LON_RANGE[0]] = False
-            mask[longitudes > settings.LON_RANGE[1]] = False
-
-            if not np.any(mask):
-                return  # No data in the region
-
-            container.apply_mask(mask)
+                if not container:
+                    return  # No data in the region
+            else:
+                if not _apply_region_mask(container):
+                    return  # No data in the region
 
         # Format date string for partitioning (YYYY-MM-DD)
         date_str = date.strftime("%Y-%m-%d")
