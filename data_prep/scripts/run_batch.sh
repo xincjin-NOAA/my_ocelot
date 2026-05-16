@@ -19,9 +19,9 @@ export LOG_LEVEL=INFO
 #python gen_data.py -p 2024-01-01 2024-12-31 ssmis  cycle_parquet
 #python gen_data.py -p 2024-01-01 2024-12-31 avhrr  cycle_parquet
 #python gen_data.py 2024-01-01 2024-12-31 raw_surface_obs cycle_parquet
-python gen_data.py 2024-11-04 2024-12-31 raw_radiosonde cycle_parquet
+#python gen_data.py 2024-01-01 2024-12-31 raw_radiosonde cycle_parquet
 #python gen_data.py  -b  --slurm_account da-cpu 2024-01-01 2024-04-30 amsua cycle_parquet
-#python gen_data.py 2024-01-01 2024-12-31 diag_atms diag_parquet
+python gen_data.py 2024-01-01 2024-12-31 diag_atms diag_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_amsua diag_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_avhrr diag_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_ssmis diag_parquet
