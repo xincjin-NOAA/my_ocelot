@@ -15,13 +15,13 @@ export LOG_LEVEL=INFO
 #srun -n 24 python gen_data.py 2024-01-01 2024-12-31 $1 zarr
 #python gen_data.py 2024-01-01 2024-04-30 raw_radiosonde zarr
 #python gen_data.py -p 2024-01-01 2024-12-31 atms cycle_parquet
-#python gen_data.py -p 2024-01-01 2024-12-31 amsua cycle_parquet
+#python gen_data.py -p 2024-06-27 2024-12-31 amsua cycle_parquet
 #python gen_data.py -p 2024-01-01 2024-12-31 ssmis  cycle_parquet
 #python gen_data.py -p 2024-01-01 2024-12-31 avhrr  cycle_parquet
 #python gen_data.py 2024-01-01 2024-12-31 raw_surface_obs cycle_parquet
-#python gen_data.py 2024-01-01 2024-12-31 raw_radiosonde cycle_parquet
+python gen_data.py 2024-11-07 2024-12-31 raw_radiosonde cycle_parquet
 #python gen_data.py  -b  --slurm_account da-cpu 2024-01-01 2024-04-30 amsua cycle_parquet
-python gen_data.py 2024-01-01 2024-12-31 diag_atms diag_parquet
+#python gen_data.py 2024-01-01 2024-12-31 diag_atms diag_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_amsua diag_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_avhrr diag_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_ssmis diag_parquet
