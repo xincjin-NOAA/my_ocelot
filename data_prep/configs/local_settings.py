@@ -23,6 +23,6 @@ OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_re
 BUFR_TABLE_DIR = '/scratch3/NCEPDEV/da/Ronald.McLaren/src/NCEPLIBS-bufr/tables'
 
 # The range of latitude and longitude for the continental US
-LAT_RANGE = (24, 51)
-LON_RANGE = (-115, -74)
+# LAT_RANGE = (24, 51)
+# LON_RANGE = (-115, -74)
 

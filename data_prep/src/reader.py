@@ -225,6 +225,7 @@ def create_yearly_data(start_date: datetime,
             output_paths[(ystart, yend)] = os.path.join(settings.OUTPUT_PATH_DIAG, file_name)
         else:
             output_paths[(ystart, yend)] = os.path.join(settings.OUTPUT_PATH, file_name)
+    print(f'output_paths: {output_paths}')
 
     if output_type == 'zarr':
         if comm.rank() == 0:
@@ -280,7 +281,7 @@ def _append_data_for_day(comm,
 
     seperate = output_type in ['cycle_parquet', 'diag_parquet']
     description, container = runner.run(comm, data_type, parameters, seperate=seperate)
-
+    print('out of runner!')
     if comm.rank() == 0:
         if seperate:
             if container is None or len(container) == 0:

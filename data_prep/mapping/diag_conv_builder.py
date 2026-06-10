@@ -19,6 +19,7 @@ config_base = {
         "output": "/scratch3/NCEPDEV/stmp/Xin.C.Jin/temp/ocelot",
     },
     "obs_vars": [
+      "Variable",
       "Station_ID",
       "Observation_Type",
       "Observation_Subtype",
@@ -45,6 +46,7 @@ config_base = {
     ],
 }
 
+
 class ConvDiagObsBuilder(ObsBuilder):
     """
     Conv Diagnostics netCDF reader: reads netCDF files containing Conv diagnostics
@@ -67,7 +69,7 @@ class ConvDiagObsBuilder(ObsBuilder):
         # if not self.config:
         #     self.config = load_config(mapping_path)
             
-        data = self.netcdf_to_container(input_path, self.config)
+        data = self.netcdf_to_container(input_path, config=self.config)
         if isinstance(data, dict):
             self.log.debug(f"data keys: {list(data.keys())}")
         else:
@@ -94,7 +96,9 @@ class ConvDiagObsBuilder(ObsBuilder):
 
             # Store dimensions
             data['nobs'] = nobs
+            
             file_date_str = os.path.basename(file_path).split('.')[-2]
+            self.log.debug(f"file_date_str: {file_date_str}")
             analysis_time = datetime.strptime(file_date_str, "%Y%m%d%H")
             analysis_time = analysis_time.replace(tzinfo=timezone.utc)
             data["timestamp"] = (analysis_time.timestamp()+ data["Time"].astype(np.float64) * 3600.0).astype(np.int64)

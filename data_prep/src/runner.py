@@ -186,7 +186,11 @@ class DiagRunner(Runner):
 
         base_dir = self.type_config.directory
         print(self.type_config.config)
-        cycles = ['00', '06', '12', '18']
+        model_domain = self.type_config.config.get('model_domain')
+        if model_domain:
+            cycles = [f'{hh:02d}' for hh in range(0, 24)]
+        else:
+            cycles = ['00', '06', '12', '18']
         # Allow obs types that do not have a satellite dimension
         file_obs_type = self.type_config.config.get('file_obs_type')
         sat_ids = self.type_config.config.get('sat_ids', [None])
@@ -206,17 +210,23 @@ class DiagRunner(Runner):
                 date_cycle_str = f"{day_str}{cycle}"
                 for sat_id in sat_ids:
                     if sat_id is None:
-                        file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
+                        if model_domain:
+                            file_name = f"{model_domain}.t{cycle}z.diag_conv_ges.{date_cycle_str}.nc4"
+                        else:   
+                            file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
                     else:
                         file_name = f"diag_{file_obs_type}_{sat_id}_ges.{date_cycle_str}.nc4"
 
-                    input_path = os.path.join(
-                        base_dir,
-                        f"gdas.{day_str}",
-                        cycle,
-                        "atmos",
-                        file_name
-                    )
+                    if model_domain:
+                        input_path = os.path.join(base_dir, f'{day_str}',file_name)
+                    else:   
+                        input_path = os.path.join(
+                            base_dir,
+                            f"gdas.{day_str}",
+                            cycle,
+                            "atmos",
+                            file_name
+                        )
 
                     if not os.path.exists(input_path):
                         print(f"File not found: {input_path}, skipping...")
