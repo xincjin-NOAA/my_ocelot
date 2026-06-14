@@ -193,6 +193,7 @@ class DiagRunner(Runner):
             cycles = ['00', '06', '12', '18']
         # Allow obs types that do not have a satellite dimension
         file_obs_type = self.type_config.config.get('file_obs_type')
+        cfg_type = self.type_config.config.get('type')
         sat_ids = self.type_config.config.get('sat_ids', [None])
 
         print("=" * 80)
@@ -211,7 +212,10 @@ class DiagRunner(Runner):
                 for sat_id in sat_ids:
                     if sat_id is None:
                         if model_domain:
-                            file_name = f"{model_domain}.t{cycle}z.diag_conv_ges.{date_cycle_str}.nc4"
+                            if cfg_type in ['anal']:
+                                file_name = f"{model_domain}.t{cycle}z.2dvar{file_obs_type}_ndfd.grb2_wexp"
+                            else:
+                                file_name = f"{model_domain}.t{cycle}z.diag_conv_ges.{date_cycle_str}.nc4"
                         else:   
                             file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
                     else:
@@ -259,7 +263,7 @@ def run(comm, data_type, parameters: Parameters, seperate: bool = False, cfg=con
         runner = TankRunner(data_type, cfg)
     elif type_cfg.type == 'pca':
         runner = PcaRunner(data_type, cfg)
-    elif type_cfg.type == 'diag':
+    elif type_cfg.type in ['diag', 'anal']:
         runner = DiagRunner(data_type, cfg)
     else:
         raise ValueError(f"Unknown data type {type_cfg.type}")

@@ -406,3 +406,12 @@ data types:
     batch_days: 15
     mapping: diag_urma_uv.py
     directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
+
+  - name: anal_urma
+    type: anal
+    file_obs_type: anl
+    model_domain: urma2p5
+    num_tasks: 12
+    batch_days: 15
+    mapping: anal_urma.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5

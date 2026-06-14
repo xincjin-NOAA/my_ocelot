@@ -117,7 +117,7 @@ class Config:
                 data_types.append(TankConfig(data_type))
             elif data_type['type'] == 'pca':
                 data_types.append(PcaConfig(data_type))
-            elif data_type['type'] == 'diag':
+            elif data_type['type'] in ['diag', 'anal']:
                 data_types.append(DiagConfig(data_type))
             else:
                 assert False, f"Unknown data type {data_type['type']} in config"

@@ -24,7 +24,7 @@ class ConvGribObsBuilder(ConvDiagObsBuilder):
      def read_netcdf_diag(self, file_path, obs_config) -> dict:
         self.log.info(f"Reading GRIB file: {file_path}")
 
-        datasets = xr.open_datasets(file_path, engine='cfgrib',
+        datasets = xr.open_dataset(file_path, engine='cfgrib',
                                     backend_kwargs={'indexpath': ''})
         ds = xr.merge(datasets)
 
