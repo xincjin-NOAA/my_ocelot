@@ -15,7 +15,10 @@ export LOG_LEVEL=INFO
 #python gen_data.py 2024-01-01 2024-12-31 diag_surface_obs_uv diag_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_surface_obs_t diag_parquet
 #python gen_data.py 2024-01-01 2024-12-31 diag_sst diag_parquet
-python gen_data.py 2025-02-01 2025-03-01 diag_urma_t diag_parquet
+# python gen_data.py 2025-02-01 2025-03-01 diag_urma_t diag_parquet
 #python gen_data.py 2025-02-01 2025-03-01 diag_urma_q diag_parquet
 #python gen_data.py 2025-02-01 2025-03-01 diag_urma_uv diag_parquet
 #python gen_data.py 2025-02-01 2025-03-01 diag_urma_ps diag_parquet
+python gen_data.py 2025-02-01 2025-02-02 anal_urma  diag_parquet
+
+
