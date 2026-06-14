@@ -21,45 +21,63 @@ from diag_conv_builder import ConvDiagObsBuilder, config_base
 
 class ConvGribObsBuilder(ConvDiagObsBuilder):
 
-     def read_netcdf_diag(self,file_path, obs_config) -> dict:
+     def read_netcdf_diag(self, file_path, obs_config) -> dict:
+        self.log.info(f"Reading GRIB file: {file_path}")
 
-        with nc.Dataset(file_path, 'r') as ncfile:
-            # Read dimensions
-            nobs = len(ncfile.dimensions[self.obs_dim_name])
+        datasets = xr.open_datasets(file_path, engine='cfgrib',
+                                    backend_kwargs={'indexpath': ''})
+        ds = xr.merge(datasets)
 
-            self.log.info(f"Reading NetCDF file: {file_path}")
-            data = {}
-            # Read channel information
-            for var_name in self.obs_vars:
-                if var_name in ncfile.variables:
-                    data[var_name] = self._maybe_decode_char_array(ncfile.variables[var_name][:])
-                else:
-                    self.log.debug(f"Warning: Variable '{var_name}' not found in NetCDF file")
+        time_name = next((c for c in ('time', 'valid_time') if c in ds.coords), None)
+        x_name    = next((c for c in ('x', 'longitude') if c in ds.coords), None)
+        y_name    = next((c for c in ('y', 'latitude')  if c in ds.coords), None)
 
-            # Store dimensions
-            data['nobs'] = nobs
-            
-            file_date_str = os.path.basename(file_path).split('.')[-2]
-            self.log.debug(f"file_date_str: {file_date_str}")
-            analysis_time = datetime.strptime(file_date_str, "%Y%m%d%H")
-            analysis_time = analysis_time.replace(tzinfo=timezone.utc)
-            data["timestamp"] = (analysis_time.timestamp()+ data["Time"].astype(np.float64) * 3600.0).astype(np.int64)
-            row_filter = self.type_config.get('row_filter') or self.type_config.get('filter_by_observation_type') 
-            if row_filter:
-                filter_var = row_filter.get('var')
-                filter_values = row_filter.get('values')
-                if filter_var and filter_values and filter_var in data:
-                    filter_arr = data[filter_var]
+        if not all([time_name, x_name, y_name]):
+            raise ValueError(
+                f"Could not resolve time/x/y coords in GRIB file {file_path}. "
+                f"Available coords: {list(ds.coords)}"
+            )
 
-                    mask = np.isin(filter_arr, filter_values)
+        time_vals = ds[time_name].values
+        y_vals    = ds[y_name].values
+        x_vals    = ds[x_name].values
 
-                    if getattr(mask, 'shape', None) and mask.shape[0] == nobs:
-                        for k, v in list(data.items()):
-                            if isinstance(v, np.ndarray) and v.ndim >= 1 and v.shape[0] == nobs:
-                                data[k] = v[mask]
-                        nobs = int(mask.sum())
-        
-        # Store dimensions
+        ntime = time_vals.shape[0] if time_vals.ndim > 0 else 1
+        ny    = y_vals.shape[0]
+        nx    = x_vals.shape[-1] if x_vals.ndim > 1 else x_vals.shape[0]
+        nobs  = ntime * ny * nx
+
+        t_grid = np.repeat(time_vals, ny * nx)
+        if x_vals.ndim == 1 and y_vals.ndim == 1:
+            yy, xx = np.meshgrid(y_vals, x_vals, indexing='ij')
+        else:
+            yy, xx = y_vals, x_vals
+        y_flat = np.tile(yy.ravel(), ntime)
+        x_flat = np.tile(xx.ravel(), ntime)
+
+        data = {y_name: y_flat, x_name: x_flat}
+
+        for var_name in self.obs_vars:
+            if var_name in ds:
+                data[var_name] = ds[var_name].values.reshape(-1)
+            else:
+                self.log.debug(f"Warning: Variable '{var_name}' not found in GRIB file")
+
+        data['nobs'] = nobs
+        data['timestamp'] = t_grid.astype('datetime64[s]').astype(np.int64)
+
+        row_filter = self.type_config.get('row_filter') or self.type_config.get('filter_by_observation_type')
+        if row_filter:
+            filter_var    = row_filter.get('var')
+            filter_values = row_filter.get('values')
+            if filter_var and filter_values and filter_var in data:
+                mask = np.isin(data[filter_var], filter_values)
+                if getattr(mask, 'shape', None) and mask.shape[0] == nobs:
+                    for k, v in list(data.items()):
+                        if isinstance(v, np.ndarray) and v.ndim >= 1 and v.shape[0] == nobs:
+                            data[k] = v[mask]
+                    nobs = int(mask.sum())
+
         data['nobs'] = nobs
         return data
 
