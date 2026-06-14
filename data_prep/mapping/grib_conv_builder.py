@@ -22,15 +22,13 @@ from diag_conv_builder import ConvDiagObsBuilder, config_base
 class ConvGribObsBuilder(ConvDiagObsBuilder):
 
      def read_netcdf_diag(self, file_path, obs_config) -> dict:
-        self.log.info(f"Reading GRIB file: {file_path}")
+        self.log.info(f"Reading NetCDF file: {file_path}")
 
-        datasets = xr.open_dataset(file_path, engine='cfgrib',
-                                    backend_kwargs={'indexpath': ''})
-        ds = xr.merge(datasets)
+        ds = xr.open_dataset(file_path)
 
         time_name = next((c for c in ('time', 'valid_time') if c in ds.coords), None)
-        x_name    = next((c for c in ('x', 'longitude') if c in ds.coords), None)
-        y_name    = next((c for c in ('y', 'latitude')  if c in ds.coords), None)
+        x_name    = next((c for c in ('lon', 'longitude', 'x') if c in ds.coords), None)
+        y_name    = next((c for c in ('lat', 'latitude',  'y') if c in ds.coords), None)
 
         if not all([time_name, x_name, y_name]):
             raise ValueError(
