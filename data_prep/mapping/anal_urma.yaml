@@ -1,0 +1,86 @@
+
+description: "Surface observations (conventional)"
+row_filter:
+  var: Variable
+  values: ['t', ]
+
+input:
+  variables:
+    x: x
+    y: y
+    latitude: latitude
+    longitude: longitude
+    hgt_surface: HGT_surface
+    pres_surface: PRES_surface
+    tmp_2maboveground: TMP_2maboveground
+    dpt_2maboveground: DPT_2maboveground
+    ugrd_10maboveground: UGRD_10maboveground
+    vgrd_10maboveground: VGRD_10maboveground
+    time: time
+    timestamp: timestamp
+  input_src: anal_urma
+
+dimensions:
+  - name: location
+    source: "location"    
+    path: "*"
+
+encoder:
+  categories:
+    - name: anal_urma
+
+  globals:
+    - name: source
+      type: string
+      value: "Diag GPS netcdf"
+
+  variables:
+    - name: MetaData/latitude
+      source: latitude
+      longName: "Latitude"
+      units: "degree_north"
+
+    - name: MetaData/longitude
+      source: longitude
+      longName: "Longitude"
+      units: "degree_east"
+
+    - name: MetaData/hgt_surface
+      source: hgt_surface
+      longName: "Pressure"
+      units: "Pa"
+
+    - name: MetaData/pres_surface
+      source: pres_surface
+      longName: "Height"
+      units: "m"
+
+    - name: MetaData/time
+      source: time
+      longName: "Observation Time"
+      units: "seconds since 1970-01-01T00:00:00Z"
+
+    - name: MetaData/timestamp
+      source: timestamp
+      longName: "Observation Time"
+      units: "seconds since 1970-01-01T00:00:00Z"
+
+    - name: MetaData/vgrd_10maboveground
+      source: vgrd_10maboveground
+      longName: "Analysis Use Flag"
+      units: "1"
+
+    - name: MetaData/dpt_2maboveground
+      source: dpt_2maboveground
+      longName: "Prep Use Flag"
+      units: "1"
+
+    - name: MetaData/ugrd_10maboveground
+      source: ugrd_10maboveground
+      longName: "Prep Use Flag"
+      units: "1"
+
+    - name: ObsValue/tmp_2maboveground
+      source: tmp_2maboveground
+      longName: "Observation"
+      units: "1"

@@ -19,7 +19,38 @@ sys.path.append(os.path.realpath(os.path.join(base_path, '..', 'mapping')))
 from diag_conv_builder import ConvDiagObsBuilder, config_base
 
 
+config_base = {
+    "base_dirs": {
+        "input": "/scratch5/purged/Xin.C.Jin/my_ocelot/diag",
+        "output": "/scratch3/NCEPDEV/stmp/Xin.C.Jin/temp/ocelot",
+    },
+    "obs_vars": [
+      "latitude",
+      "longitude",
+      "time",
+      "timestamp",
+      "HGT_surface",
+      "PRES_surface",
+      "TMP_2maboveground",
+      "DPT_2maboveground",
+      "UGRD_10maboveground",
+      "VGRD_10maboveground",
+    ],
+}
+
+
+
 class ConvGribObsBuilder(ConvDiagObsBuilder):
+     
+     def __init__(self, map_dict, log_name=None):
+        super().__init__(map_dict, log_name=log_name)
+        self.config = config_base
+        with open(map_dict, 'r') as f:
+            self.type_config = yaml.safe_load(f)
+        self.obs_vars = self.config.get('obs_vars', [])
+        self.obs_dim_name = self.type_config.get('obs_dim_name', 'nobs')
+        self.dim_path_map = {dim["name"]: dim["path"] for dim in self.type_config.get("dimensions", [])}
+
 
      def read_netcdf_diag(self, file_path, obs_config) -> dict:
         self.log.info(f"Reading NetCDF file: {file_path}")

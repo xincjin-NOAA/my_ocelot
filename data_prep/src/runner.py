@@ -213,7 +213,7 @@ class DiagRunner(Runner):
                     if sat_id is None:
                         if model_domain:
                             if cfg_type in ['anal']:
-                                file_name = f"{model_domain}.t{cycle}z.2dvar{file_obs_type}_ndfd.grb2_wexp"
+                                file_name = f"{model_domain}.t{cycle}z.2dvar{file_obs_type}_ndfd.grb2_wexp.nc"
                             else:
                                 file_name = f"{model_domain}.t{cycle}z.diag_conv_ges.{date_cycle_str}.nc4"
                         else:   
