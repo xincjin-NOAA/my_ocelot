@@ -215,14 +215,26 @@ class DiagRunner(Runner):
                             if cfg_type in ['anal']:
                                 file_name = f"{model_domain}.t{cycle}z.2dvar{file_obs_type}_ndfd.grb2_wexp.nc"
                             else:
-                                file_name = f"{model_domain}.t{cycle}z.diag_conv_ges.{date_cycle_str}.nc4"
+                                if model_domain in ['rrfs']:
+                                    file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
+                                else:
+                                    file_name = f"{model_domain}.t{cycle}z.diag_conv_ges.{date_cycle_str}.nc4"
                         else:   
                             file_name = f"diag_{file_obs_type}_ges.{date_cycle_str}.nc4"
                     else:
                         file_name = f"diag_{file_obs_type}_{sat_id}_ges.{date_cycle_str}.nc4"
 
                     if model_domain:
-                        input_path = os.path.join(base_dir, f'{day_str}',file_name)
+                        if model_domain in ['rrfs']:
+                             input_path = os.path.join(
+                                base_dir,
+                                f"rrfs.{day_str}",
+                                cycle,
+                                "analysis",
+                                file_name
+                            )
+                        else:
+                             input_path = os.path.join(base_dir, f'{day_str}',file_name)
                     else:   
                         input_path = os.path.join(
                             base_dir,

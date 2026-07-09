@@ -16,15 +16,13 @@ DATETIME_DIR_FORMAT_DIAG = '%Y%m%d'
 # (example: '/install_dir/src/spoc/tank/mapping')
 MAPPING_FILE_DIR = '/scratch3/NCEPDEV/da/Xin.C.Jin/git/my_ocelot/data_prep/mapping'
 
-OUTPUT_PATH = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/bufr_regional'
+OUTPUT_PATH = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/bufr_global'
 
-OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_rrfs/dev'
-
-# OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_regional/dev'
+OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_global/dev'
 
 BUFR_TABLE_DIR = '/scratch3/NCEPDEV/da/Ronald.McLaren/src/NCEPLIBS-bufr/tables'
 
 # The range of latitude and longitude for the continental US
-# LAT_RANGE = (24, 51)
-# LON_RANGE = (-115, -74)
+#LAT_RANGE = (24, 51)
+#LON_RANGE = (-115, -74)
 

@@ -1,251 +1,21 @@
 data types:
-  - name: atms
-    type: tank
-    num_tasks: 24
-    batch_days: 15
-    mapping: bufr_atms.py
-    paths:
-      - 00/atmos/gdas.t00z.atms.tm00.bufr_d
-      - 06/atmos/gdas.t06z.atms.tm00.bufr_d
-      - 12/atmos/gdas.t12z.atms.tm00.bufr_d
-      - 18/atmos/gdas.t18z.atms.tm00.bufr_d
-
-  - name: surface_obs
-    type: tank
-    num_tasks: 4
-    batch_days: 30
-    mapping: bufr_surface_obs.py
-    paths:
-      - 00/atmos/gdas.t00z.prepbufr
-      - 06/atmos/gdas.t06z.prepbufr
-      - 12/atmos/gdas.t12z.prepbufr
-      - 18/atmos/gdas.t18z.prepbufr
-
-  - name: raw_surface_obs
-    type: tank
-    num_tasks: 1
-    batch_days: 30
-    memory: 48G
-    mapping: bufr_surface_obs_raw.py
-    paths:
-      prepbufr:
-        - 00/atmos/gdas.t00z.prepbufr
-        - 06/atmos/gdas.t06z.prepbufr
-        - 12/atmos/gdas.t12z.prepbufr
-        - 18/atmos/gdas.t18z.prepbufr
-      adpsfc:
-        - 00/atmos/gdas.t00z.adpsfc.tm00.bufr_d
-        - 06/atmos/gdas.t06z.adpsfc.tm00.bufr_d
-        - 12/atmos/gdas.t12z.adpsfc.tm00.bufr_d
-        - 18/atmos/gdas.t18z.adpsfc.tm00.bufr_d
-      sfcshp:
-        - 00/atmos/gdas.t00z.sfcshp.tm00.bufr_d
-        - 06/atmos/gdas.t06z.sfcshp.tm00.bufr_d
-        - 12/atmos/gdas.t12z.sfcshp.tm00.bufr_d
-        - 18/atmos/gdas.t18z.sfcshp.tm00.bufr_d
-
-  - name: radiosonde
-    type: tank
-    num_tasks: 4
-    batch_days: 30
-    mapping: bufr_radiosonde.py
-    paths:
-      - 00/atmos/gdas.t00z.prepbufr
-      - 06/atmos/gdas.t06z.prepbufr
-      - 12/atmos/gdas.t12z.prepbufr
-      - 18/atmos/gdas.t18z.prepbufr
-
-  - name: raw_radiosonde
-    type: tank
-    num_tasks: 1
-    batch_days: 15
-    mapping: bufr_radiosonde_raw.py
-    paths:
-      prepbufr:
-        - 00/atmos/gdas.t00z.prepbufr
-        - 06/atmos/gdas.t06z.prepbufr
-        - 12/atmos/gdas.t12z.prepbufr
-        - 18/atmos/gdas.t18z.prepbufr
-      low_res_dump:
-        - 00/atmos/gdas.t00z.adpupa.tm00.bufr_d
-        - 06/atmos/gdas.t06z.adpupa.tm00.bufr_d
-        - 12/atmos/gdas.t12z.adpupa.tm00.bufr_d
-        - 18/atmos/gdas.t18z.adpupa.tm00.bufr_d
-      high_res_dump:
-        - 00/atmos/gdas.t00z.uprair.tm00.bufr_d
-        - 06/atmos/gdas.t06z.uprair.tm00.bufr_d
-        - 12/atmos/gdas.t12z.uprair.tm00.bufr_d
-        - 18/atmos/gdas.t18z.uprair.tm00.bufr_d
-
-  - name: ssmis
-    memory: 128G
-    type: tank
-    num_tasks: 4
-    batch_days: 30
-    mapping: bufr_ssmis.py
-    paths:
-      - 00/atmos/gdas.t00z.ssmisu.tm00.bufr_d
-      - 06/atmos/gdas.t06z.ssmisu.tm00.bufr_d
-      - 12/atmos/gdas.t12z.ssmisu.tm00.bufr_d
-      - 18/atmos/gdas.t18z.ssmisu.tm00.bufr_d
-
-  - name: seviri
-    memory: 128G
-    type: tank
-    num_tasks: 4
-    batch_days: 30
-    mapping: bufr_seviri.py
-    paths:
-      sevcsr:
-        - 00/atmos/gdas.t00z.sevcsr.tm00.bufr_d
-        - 06/atmos/gdas.t06z.sevcsr.tm00.bufr_d
-        - 12/atmos/gdas.t12z.sevcsr.tm00.bufr_d
-        - 18/atmos/gdas.t18z.sevcsr.tm00.bufr_d
-      sevasr:
-        - 00/atmos/gdas.t00z.sevasr.tm00.bufr_d
-        - 06/atmos/gdas.t06z.sevasr.tm00.bufr_d
-        - 12/atmos/gdas.t12z.sevasr.tm00.bufr_d
-        - 18/atmos/gdas.t18z.sevasr.tm00.bufr_d
-
-  - name: amsua
-    type: tank
-    num_tasks: 4
-    batch_days: 30
-    mapping: bufr_amsua.py
-    paths:
-      - 00/atmos/gdas.t00z.1bamua.tm00.bufr_d
-      - 06/atmos/gdas.t06z.1bamua.tm00.bufr_d
-      - 12/atmos/gdas.t12z.1bamua.tm00.bufr_d
-      - 18/atmos/gdas.t18z.1bamua.tm00.bufr_d
-
-  - name: ascat
-    type: tank
-    num_tasks: 16
-    batch_days: 30
-    mapping: bufr_ascat.py
-    paths:
-      - 00/atmos/gdas.t00z.ascatt.tm00.bufr_d
-      - 06/atmos/gdas.t06z.ascatt.tm00.bufr_d
-      - 12/atmos/gdas.t12z.ascatt.tm00.bufr_d
-      - 18/atmos/gdas.t18z.ascatt.tm00.bufr_d
-
-  - name: viirs
-    type: tank
-    num_tasks: 24
-    batch_days: 15
-    mapping: bufr_amsua.py
-    paths:
-      - 00/atmos/gdas.t00z.sstvcw.tm00.bufr_d
-      - 06/atmos/gdas.t06z.sstvcw.tm00.bufr_d
-      - 12/atmos/gdas.t12z.sstvcw.tm00.bufr_d
-      - 18/atmos/gdas.t18z.sstvcw.tm00.bufr_d
-
-  - name: avhrr
-    type: tank
-    num_tasks: 64
-    batch_days: 7
-    memory: 128G
-    mapping: bufr_avhrr.py
-    paths:
-      am:
-        - 00/atmos/gdas.t00z.avcsam.tm00.bufr_d
-        - 06/atmos/gdas.t06z.avcsam.tm00.bufr_d
-        - 12/atmos/gdas.t12z.avcsam.tm00.bufr_d
-        - 18/atmos/gdas.t18z.avcsam.tm00.bufr_d
-      pm:
-        - 00/atmos/gdas.t00z.avcspm.tm00.bufr_d
-        - 06/atmos/gdas.t06z.avcspm.tm00.bufr_d
-        - 12/atmos/gdas.t12z.avcspm.tm00.bufr_d
-        - 18/atmos/gdas.t18z.avcspm.tm00.bufr_d
-
-  - name: iasi_pca
-    type: pca
+  
+  - name: diag_abi
+    type: diag
+    file_obs_type: abi
+    model_domain: rrfs
+    sat_ids:
+      - g18
+      - g19
     num_tasks: 12
     batch_days: 15
-    mapping: pca_iasi.py
-    directory: /scratch3/NCEPDEV/stmp/Andrew.Collard/IASI_PCA/bufr
-    filename_regex: M03-IASI-IASPCS1C-NA-1\.0-(?P<start_time>\d{14})\.000000000Z-(?P<end_time>\d{14})-4887062-\d{1}\.bfr 
-
-  - name: snow_cover
-    type: tank
-    num_tasks: 4
-    batch_days: 30
-    mapping: bufr_snowcover.py
-    paths:
-      sfcsno:
-        - 00/atmos/gdas.t00z.sfcsno.tm00.bufr_d
-        - 06/atmos/gdas.t06z.sfcsno.tm00.bufr_d
-        - 12/atmos/gdas.t12z.sfcsno.tm00.bufr_d
-        - 18/atmos/gdas.t18z.sfcsno.tm00.bufr_d
-      snocvr:
-        - 00/atmos/gdas.t00z.snocvr.tm00.bufr_d
-        - 06/atmos/gdas.t06z.snocvr.tm00.bufr_d
-        - 12/atmos/gdas.t12z.snocvr.tm00.bufr_d
-        - 18/atmos/gdas.t18z.snocvr.tm00.bufr_d
-
-  - name: aircraft
-    type: tank
-    memory: 48G
-    num_tasks: 1
-    batch_days: 15
-    mapping: bufr_aircraft.py
-    paths:
-      - 00/atmos/gdas.t00z.prepbufr.acft_profiles
-      - 06/atmos/gdas.t06z.prepbufr.acft_profiles
-      - 12/atmos/gdas.t12z.prepbufr.acft_profiles
-      - 18/atmos/gdas.t18z.prepbufr.acft_profiles
-
-  - name: iasi
-    type: pca
-    num_tasks: 12
-    batch_days: 15
-    mapping: pca_iasi.py
-    directory: /scratch3/NCEPDEV/stmp/Andrew.Collard/IASI_PCA/bufr
-    filename_regex: M03-IASI-IASPCS1C-NA-1\.0-(?P<start_time>\d{14})\.000000000Z-(?P<end_time>\d{14})-4887062-\d{1}\.bfr
-
-  - name: cris-fsr
-    type: pca
-    num_tasks: 12
-    batch_days: 15
-    mapping: pca_iasi.py
-    directory: /scratch3/NCEPDEV/stmp/Andrew.Collard/IASI_PCA/bufr
-    filename_regex: M03-IASI-IASPCS1C-NA-1\.0-(?P<start_time>\d{14})\.000000000Z-(?P<end_time>\d{14})-4887062-\d{1}\.bfr
-
-  - name: surface_obs_uv
-    type: pca
-    num_tasks: 12
-    batch_days: 15
-    mapping: pca_iasi.py
-    directory: /scratch3/NCEPDEV/stmp/Andrew.Collard/IASI_PCA/bufr
-    filename_regex: M03-IASI-IASPCS1C-NA-1\.0-(?P<start_time>\d{14})\.000000000Z-(?P<end_time>\d{14})-4887062-\d{1}\.bfr
-
-  - name: surface_obs_t
-    type: pca
-    num_tasks: 12
-    batch_days: 15
-    mapping: pca_iasi.py
-    directory: /scratch3/NCEPDEV/stmp/Andrew.Collard/IASI_PCA/bufr
-    filename_regex: M03-IASI-IASPCS1C-NA-1\.0-(?P<start_time>\d{14})\.000000000Z-(?P<end_time>\d{14})-4887062-\d{1}\.bfr
-
-  - name: sst
-    type: pca
-    num_tasks: 12
-    batch_days: 15
-    mapping: pca_iasi.py
-    directory: /scratch3/NCEPDEV/stmp/Andrew.Collard/IASI_PCA/bufr
-    filename_regex: M03-IASI-IASPCS1C-NA-1\.0-(?P<start_time>\d{14})\.000000000Z-(?P<end_time>\d{14})-4887062-\d{1}\.bfr
-
-  - name: gps
-    type: pca
-    num_tasks: 12
-    batch_days: 15
-    mapping: pca_iasi.py
-    directory: /scratch3/NCEPDEV/stmp/Andrew.Collard/IASI_PCA/bufr
-    filename_regex: M03-IASI-IASPCS1C-NA-1\.0-(?P<start_time>\d{14})\.000000000Z-(?P<end_time>\d{14})-4887062-\d{1}\.bfr
+    mapping: diag_abi.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
 
   - name: diag_atms
     type: diag
     file_obs_type: atms
+    model_domain: rrfs
     sat_ids:
       - n20
       - n21
@@ -253,11 +23,12 @@ data types:
     num_tasks: 12
     batch_days: 15
     mapping: diag_atms.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
 
   - name: diag_amsua
     type: diag
     file_obs_type: amsua
+    model_domain: rrfs
     sat_ids:
       - n15
       - n18
@@ -267,85 +38,59 @@ data types:
     num_tasks: 12
     batch_days: 15
     mapping: diag_amsua.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
-
-  - name: diag_avhrr
-    type: diag
-    file_obs_type: avhrr
-    sat_ids:
-      - n18
-      - n19
-      - metop-b
-      - metop-c
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_avhrr.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
-
-  - name: diag_ssmis
-    type: diag
-    file_obs_type: ssmis
-    sat_ids:
-      - f17
-      - f18
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_ssmis.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
 
   - name: diag_iasi
     type: diag
     file_obs_type: iasi
+    model_domain: rrfs
     sat_ids:
       - metop-b
       - metop-c
     num_tasks: 12
     batch_days: 15
     mapping: diag_iasi.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
 
   - name: diag_cris-fsr
     type: diag
     file_obs_type: cris-fsr
+    model_domain: rrfs
     sat_ids:
       - n20
       - n21
     num_tasks: 12
     batch_days: 15
     mapping: diag_cris-fsr.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
-
-  - name: diag_gps
-    type: diag
-    file_obs_type: conv_gps
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_gps.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
 
   - name: diag_surface_obs_uv
     type: diag
     file_obs_type: conv_uv
+    model_domain: rrfs
     num_tasks: 12
     batch_days: 15
     mapping: diag_surface_obs_uv.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+
 
   - name: diag_surface_obs_t
     type: diag
     file_obs_type: conv_t
+    model_domain: rrfs
     num_tasks: 12
     batch_days: 15
     mapping: diag_surface_obs_t.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
-
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+    
   - name: diag_sst
     type: diag
     file_obs_type: conv_sst
+    model_domain: rrfs
     num_tasks: 12
     batch_days: 15
     mapping: diag_sst.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
 
   - name: diag_radiosonde_t
     type: diag
@@ -370,57 +115,3 @@ data types:
     batch_days: 15
     mapping: diag_radiosonde_q.py
     directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
-
-  - name: diag_urma_t
-    type: diag
-    file_obs_type: conv_t
-    model_domain: urma2p5
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_urma_t.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
-
-  - name: diag_urma_q
-    type: diag
-    file_obs_type: conv_t
-    model_domain: urma2p5
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_urma_q.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
-
-  - name: diag_urma_ps
-    type: diag
-    file_obs_type: conv_t
-    model_domain: urma2p5
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_urma_ps.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
-
-  - name: diag_urma_uv
-    type: diag
-    file_obs_type: conv_t
-    model_domain: urma2p5
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_urma_uv.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
-
-  - name: anal_urma
-    type: anal
-    file_obs_type: anl
-    model_domain: urma2p5
-    num_tasks: 12
-    batch_days: 15
-    mapping: anal_urma.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
-
-  - name: ges_urma
-    type: anal
-    file_obs_type: ges
-    model_domain: urma2p5
-    num_tasks: 12
-    batch_days: 15
-    mapping: anal_urma.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
