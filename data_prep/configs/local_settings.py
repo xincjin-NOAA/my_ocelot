@@ -18,7 +18,9 @@ MAPPING_FILE_DIR = '/scratch3/NCEPDEV/da/Xin.C.Jin/git/my_ocelot/data_prep/mappi
 
 OUTPUT_PATH = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/bufr_regional'
 
-OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_rrfs/dev'
+# OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_rrfs/dev'
+
+OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_urma/dev'
 
 # OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_regional/dev'
 

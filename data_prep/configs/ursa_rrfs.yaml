@@ -1,0 +1,117 @@
+data types:
+  
+  - name: diag_abi
+    type: diag
+    file_obs_type: abi
+    model_domain: rrfs
+    sat_ids:
+      - g18
+      - g19
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_abi.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+
+  - name: diag_atms
+    type: diag
+    file_obs_type: atms
+    model_domain: rrfs
+    sat_ids:
+      - n20
+      - n21
+      - npp
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_atms.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+
+  - name: diag_amsua
+    type: diag
+    file_obs_type: amsua
+    model_domain: rrfs
+    sat_ids:
+      - n15
+      - n18
+      - n19
+      - metop-b
+      - metop-c
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_amsua.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+
+  - name: diag_iasi
+    type: diag
+    file_obs_type: iasi
+    model_domain: rrfs
+    sat_ids:
+      - metop-b
+      - metop-c
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_iasi.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+
+  - name: diag_cris-fsr
+    type: diag
+    file_obs_type: cris-fsr
+    model_domain: rrfs
+    sat_ids:
+      - n20
+      - n21
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_cris-fsr.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+
+  - name: diag_surface_obs_uv
+    type: diag
+    file_obs_type: conv_uv
+    model_domain: rrfs
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_surface_obs_uv.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+
+
+  - name: diag_surface_obs_t
+    type: diag
+    file_obs_type: conv_t
+    model_domain: rrfs
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_surface_obs_t.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+    
+  - name: diag_sst
+    type: diag
+    file_obs_type: conv_sst
+    model_domain: rrfs
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_sst.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+
+  - name: diag_radiosonde_t
+    type: diag
+    file_obs_type: conv_t
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_radiosonde_t.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_radiosonde_uv
+    type: diag
+    file_obs_type: conv_uv
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_radiosonde_uv.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+
+  - name: diag_radiosonde_q
+    type: diag
+    file_obs_type: conv_q
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_radiosonde_q.py
+    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag

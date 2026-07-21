@@ -1,117 +1,108 @@
 data types:
-  
-  - name: diag_abi
-    type: diag
-    file_obs_type: abi
-    model_domain: rrfs
-    sat_ids:
-      - g18
-      - g19
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_abi.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
-
-  - name: diag_atms
-    type: diag
-    file_obs_type: atms
-    model_domain: rrfs
-    sat_ids:
-      - n20
-      - n21
-      - npp
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_atms.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
-
-  - name: diag_amsua
-    type: diag
-    file_obs_type: amsua
-    model_domain: rrfs
-    sat_ids:
-      - n15
-      - n18
-      - n19
-      - metop-b
-      - metop-c
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_amsua.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
-
-  - name: diag_iasi
-    type: diag
-    file_obs_type: iasi
-    model_domain: rrfs
-    sat_ids:
-      - metop-b
-      - metop-c
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_iasi.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
-
-  - name: diag_cris-fsr
-    type: diag
-    file_obs_type: cris-fsr
-    model_domain: rrfs
-    sat_ids:
-      - n20
-      - n21
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_cris-fsr.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
-
-  - name: diag_surface_obs_uv
-    type: diag
-    file_obs_type: conv_uv
-    model_domain: rrfs
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_surface_obs_uv.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
-
-
-  - name: diag_surface_obs_t
+  - name: diag_urma_t
     type: diag
     file_obs_type: conv_t
-    model_domain: rrfs
+    model_domain: urma2p5
     num_tasks: 12
     batch_days: 15
-    mapping: diag_surface_obs_t.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
-    
-  - name: diag_sst
-    type: diag
-    file_obs_type: conv_sst
-    model_domain: rrfs
-    num_tasks: 12
-    batch_days: 15
-    mapping: diag_sst.py
-    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/data/rrfs
+    mapping: diag_urma_t.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
 
-  - name: diag_radiosonde_t
+  - name: diag_urma_q
     type: diag
     file_obs_type: conv_t
+    model_domain: urma2p5
     num_tasks: 12
     batch_days: 15
-    mapping: diag_radiosonde_t.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+    mapping: diag_urma_q.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
 
-  - name: diag_radiosonde_uv
+  - name: diag_urma_ps
     type: diag
-    file_obs_type: conv_uv
+    file_obs_type: conv_t
+    model_domain: urma2p5
     num_tasks: 12
     batch_days: 15
-    mapping: diag_radiosonde_uv.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+    mapping: diag_urma_ps.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
 
-  - name: diag_radiosonde_q
+  - name: diag_urma_uv
     type: diag
-    file_obs_type: conv_q
+    file_obs_type: conv_t
+    model_domain: urma2p5
     num_tasks: 12
     batch_days: 15
-    mapping: diag_radiosonde_q.py
-    directory: /scratch5/purged/Xin.C.Jin/my_ocelot/diag
+    mapping: diag_urma_uv.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
+
+  - name: diag_urma_cei
+    type: diag
+    file_obs_type: conv_t
+    model_domain: urma2p5
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_urma_cei.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
+
+  - name: diag_urma_gst
+    type: diag
+    file_obs_type: conv_t
+    model_domain: urma2p5
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_urma_gst.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
+
+  - name: diag_urma_hwv
+    type: diag
+    file_obs_type: conv_t
+    model_domain: urma2p5
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_urma_hwv.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
+
+  - name: diag_urma_tca
+    type: diag
+    file_obs_type: conv_t
+    model_domain: urma2p5
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_urma_tca.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
+
+  - name: diag_urma_vis
+    type: diag
+    file_obs_type: conv_t
+    model_domain: urma2p5
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_urma_vis.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
+
+  - name: diag_urma_wst
+    type: diag
+    file_obs_type: conv_t
+    model_domain: urma2p5
+    num_tasks: 12
+    batch_days: 15
+    mapping: diag_urma_wst.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
+
+  - name: anal_urma
+    type: anal
+    file_obs_type: anl
+    model_domain: urma2p5
+    num_tasks: 12
+    batch_days: 15
+    mapping: anal_urma.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
+
+  - name: ges_urma
+    type: anal
+    file_obs_type: ges
+    model_domain: urma2p5
+    num_tasks: 12
+    batch_days: 15
+    mapping: anal_urma.py
+    directory: /scratch5/purged/Xin.C.Jin/reg_ocelot/temp_prod_archive_urma2p5
