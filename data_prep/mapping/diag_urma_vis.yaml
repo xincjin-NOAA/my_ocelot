@@ -21,6 +21,7 @@ input:
     #prep_qc_mark: Prep_QC_Mark
     #setup_qc_mark: Setup_QC_Mark
     observation: Observation
+    omb:  Obs_Minus_Forecast_adjusted
   input_src: conv_t
 
 dimensions:
@@ -91,4 +92,9 @@ encoder:
     - name: ObsValue/observation
       source: observation
       longName: "Observation"
+      units: "1"
+
+    - name: ObsValue/omb
+      source: omb
+      longName: "Obs minus b"
       units: "1"

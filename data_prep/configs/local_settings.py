@@ -20,7 +20,8 @@ OUTPUT_PATH = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/bufr_regiona
 
 # OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_rrfs/dev'
 
-OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_urma/dev'
+# OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_urma/dev'
+OUTPUT_PATH_DIAG = '/scratch5/purged/Xin.C.Jin/data/v1/diag_urma'
 
 # OUTPUT_PATH_DIAG = '/scratch3/NCEPDEV/stmp/Xin.C.Jin/data/ocelot/data_v6/diag_regional/dev'
 

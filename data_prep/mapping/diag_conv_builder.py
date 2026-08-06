@@ -37,6 +37,7 @@ config_base = {
       "Prep_QC_Mark",
       "Setup_QC_Mark",
       "Observation",
+      "Obs_Minus_Forecast_adjusted",
       "u_Observation",
       "v_Observation",
       "u_Obs_Minus_Forecast_adjusted",

@@ -20,8 +20,8 @@ OBS_TYPE=${1:-diag_surface_obs_uv}
 # diag_urma_q, t, uv, cei, gst, hwv, ps, tca, vis, wst
 
 python gen_data.py \
-    2025-02-01 \
     2025-03-01 \
+    2025-06-01 \
     ${OBS_TYPE} \
     diag_parquet
 
